@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/dimension.json",
+  "title": "Extended Datacube Dimension",
+  "description": "Extends the STAC Datacube Extension dimension object with size, values_href, and generator properties for scalable dimension member dissemination.",
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["spatial", "temporal", "bands", "other"],
+      "description": "Dimension type as defined by the STAC Datacube Extension."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the dimension."
+    },
+    "axis": {
+      "type": "string",
+      "enum": ["x", "y", "z", "t"],
+      "description": "Spatial or temporal axis."
+    },
+    "extent": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "The extent (minimum and maximum values) of the dimension."
+    },
+    "values": {
+      "type": "array",
+      "description": "Explicit enumeration of dimension members. OPTIONAL when values_href is provided."
+    },
+    "step": {
+      "description": "The space between dimension values. Use null for irregular spacing. Supports ISO 8601 durations and extended notation (1K for dekad, 1P for pentad).",
+      "oneOf": [
+        {"type": "number"},
+        {"type": "string"},
+        {"type": "null"}
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit of measure. Reference UCUM or OGC Definition URIs."
+    },
+    "reference_system": {
+      "description": "The spatial or temporal reference system.",
+      "oneOf": [
+        {"type": "string"},
+        {"type": "integer"},
+        {"type": "object"}
+      ]
+    },
+    "size": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of discrete members in this dimension. Allows clients to know cardinality without downloading values. RECOMMENDED."
+    },
+    "values_href": {
+      "type": "string",
+      "format": "uri-reference",
+      "description": "Link to a paginated endpoint returning dimension values. When present, values MAY be omitted. Relative or absolute URI."
+    },
+    "generator": {
+      "$ref": "generator.json",
+      "description": "Algorithmic member generation definition. See generator.json schema."
+    }
+  },
+  "dependentSchemas": {
+    "values_href": {
+      "description": "When values_href is provided, values becomes optional."
+    }
+  }
+}

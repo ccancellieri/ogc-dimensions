@@ -1,0 +1,58 @@
+{
+  "_comment": "Two pentadal systems shown side by side",
+
+  "pentadal_monthly_example": {
+    "description": "Month-based pentadal (72 periods/year). Each month has 6 pentads of 5 days; P6 absorbs remaining days (26-end). Used by CHIRPS, CDT, FAO.",
+    "cube:dimensions": {
+      "time": {
+        "type": "temporal",
+        "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+        "generator": {
+          "type": "pentadal-monthly",
+          "output": {
+            "type": "object",
+            "properties": {
+              "code": {"type": "string", "description": "YYYY-Pnn (nn=01..72)"},
+              "start": {"type": "string", "format": "date"},
+              "end": {"type": "string", "format": "date"}
+            },
+            "required": ["code", "start", "end"]
+          },
+          "bijective": true,
+          "search": ["exact", "range"],
+          "on_invalid": "reject"
+        },
+        "step": "1P",
+        "unit": "pentad",
+        "size": 1800
+      }
+    }
+  },
+
+  "pentadal_annual_example": {
+    "description": "Year-based pentadal (73 periods/year). Consecutive 5-day periods starting Jan 1. Period 73 has 5 or 6 days (leap year). Used by GPCP, CPC/NOAA.",
+    "cube:dimensions": {
+      "time": {
+        "type": "temporal",
+        "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+        "generator": {
+          "type": "pentadal-annual",
+          "output": {
+            "type": "object",
+            "properties": {
+              "code": {"type": "string", "description": "YYYY-Ann (nn=01..73)"},
+              "start": {"type": "string", "format": "date"},
+              "end": {"type": "string", "format": "date"}
+            },
+            "required": ["code", "start", "end"]
+          },
+          "bijective": true,
+          "search": ["exact", "range"]
+        },
+        "step": "1P",
+        "unit": "pentad",
+        "size": 1825
+      }
+    }
+  }
+}

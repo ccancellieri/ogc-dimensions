@@ -1,0 +1,62 @@
+{
+  "type": "Collection",
+  "id": "chirps-dekadal-precipitation",
+  "title": "CHIRPS Dekadal Precipitation",
+  "description": "Climate Hazards Group InfraRed Precipitation with Station data, aggregated to dekadal (10-day) periods.",
+  "extent": {
+    "spatial": {"bbox": [[-180, -50, 180, 50]]},
+    "temporal": {"interval": [["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
+  },
+  "cube:dimensions": {
+    "time": {
+      "type": "temporal",
+      "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+      "generator": {
+        "type": "dekadal",
+        "api": "http://www.opengis.net/def/generator/ogc/0/dekadal/openapi.json",
+        "parameters": {},
+        "output": {
+          "type": "object",
+          "properties": {
+            "code": {"type": "string", "description": "YYYY-Knn (nn=01..36)"},
+            "start": {"type": "string", "format": "date"},
+            "end": {"type": "string", "format": "date"},
+            "days": {"type": "integer", "minimum": 8, "maximum": 11}
+          },
+          "required": ["code", "start", "end"]
+        },
+        "bijective": true,
+        "search": ["exact", "range"],
+        "on_invalid": "reject"
+      },
+      "step": "1K",
+      "unit": "dekad",
+      "size": 900,
+      "values_href": "./dimensions/time/values"
+    },
+    "x": {
+      "type": "spatial",
+      "axis": "x",
+      "extent": [-180, 180],
+      "reference_system": 4326,
+      "step": 0.05
+    },
+    "y": {
+      "type": "spatial",
+      "axis": "y",
+      "extent": [-50, 50],
+      "reference_system": 4326,
+      "step": 0.05
+    }
+  },
+  "cube:variables": {
+    "precipitation": {
+      "dimensions": ["time", "y", "x"],
+      "type": "data",
+      "unit": "mm"
+    }
+  },
+  "stac_extensions": [
+    "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
+  ]
+}

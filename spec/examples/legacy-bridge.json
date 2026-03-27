@@ -1,0 +1,39 @@
+{
+  "_comment": "Legacy client compatibility: dekadal dimension producing standard ISO datetimes. Legacy clients hit values_href and see a valid irregular temporal dimension without knowing about dekads.",
+  "cube:dimensions": {
+    "time": {
+      "type": "temporal",
+      "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+      "generator": {
+        "type": "dekadal",
+        "output": {"type": "string", "format": "date"},
+        "bijective": true
+      },
+      "step": null,
+      "size": 900,
+      "values_href": "./dimensions/time/values"
+    }
+  },
+  "_values_href_sample_response": {
+    "dimension": "time",
+    "type": "temporal",
+    "numberMatched": 900,
+    "numberReturned": 10,
+    "values": [
+      "2000-01-01",
+      "2000-01-11",
+      "2000-01-21",
+      "2000-02-01",
+      "2000-02-11",
+      "2000-02-21",
+      "2000-03-01",
+      "2000-03-11",
+      "2000-03-21",
+      "2000-04-01"
+    ],
+    "links": [
+      {"rel": "self", "href": "./dimensions/time/values?limit=10&offset=0", "type": "application/json"},
+      {"rel": "next", "href": "./dimensions/time/values?limit=10&offset=10", "type": "application/json"}
+    ]
+  }
+}

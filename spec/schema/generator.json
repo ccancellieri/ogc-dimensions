@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/generator.json",
+  "title": "Dimension Generator",
+  "description": "Algorithmic member generation with machine-discoverable OpenAPI definitions, applicable to any dimension type.",
+  "type": "object",
+  "required": ["type", "output"],
+  "properties": {
+    "type": {
+      "description": "Short identifier for well-known algorithms or full URI for custom generators.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "dekadal",
+            "pentadal-monthly",
+            "pentadal-annual",
+            "iso-week",
+            "integer-range",
+            "grid-index"
+          ],
+          "description": "Well-known generator type. Resolves to a registered OGC Definition URI."
+        },
+        {
+          "type": "string",
+          "format": "uri",
+          "description": "Full URI for custom generator definitions."
+        }
+      ]
+    },
+    "api": {
+      "type": "string",
+      "format": "uri",
+      "description": "OpenAPI definition URI. REQUIRED for custom generators. Implicit (resolvable from type) for well-known types. Machine clients fetch this to discover the generation endpoint."
+    },
+    "parameters": {
+      "description": "Input parameters for the algorithm. Defined per JSON Schema 2020-12. Maps to the OpenAPI request schema.",
+      "$ref": "https://json-schema.org/draft/2020-12/schema"
+    },
+    "output": {
+      "description": "Type and structure of each generated member. Defined per JSON Schema 2020-12. Maps to the OpenAPI response schema.",
+      "$ref": "https://json-schema.org/draft/2020-12/schema"
+    },
+    "bijective": {
+      "type": "boolean",
+      "default": false,
+      "description": "true if the generator is invertible (value to parameters). Enables /inverse capability."
+    },
+    "search": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["exact", "range", "like", "vector"]
+      },
+      "uniqueItems": true,
+      "description": "Supported search protocols."
+    },
+    "on_invalid": {
+      "type": "string",
+      "enum": ["reject", "accept", "warn"],
+      "default": "reject",
+      "description": "Item ingestion behavior when inverse validation fails."
+    }
+  },
+  "if": {
+    "not": {
+      "properties": {
+        "type": {
+          "enum": [
+            "dekadal",
+            "pentadal-monthly",
+            "pentadal-annual",
+            "iso-week",
+            "integer-range",
+            "grid-index"
+          ]
+        }
+      }
+    }
+  },
+  "then": {
+    "required": ["type", "output", "api"]
+  }
+}
