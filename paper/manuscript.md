@@ -48,7 +48,11 @@ The `values` array is the sole mechanism for communicating discrete dimension me
 
 ### 2.2 OGC API - GeoDataCube
 
-The GeoDataCube API, developed through OGC Testbed 17-20, defines a profile layering datacube semantics onto OGC API - Coverages. It adopts STAC `cube:dimensions` verbatim for dimension description. The Testbed 19 Engineering Report (doc 23-047) documents the API architecture and identifies several open gaps directly relevant to this work: no pagination for dimension values within collection metadata, no enumeration of irregular temporal values beyond `step: null`, and no non-Gregorian calendar support.
+The GeoDataCube API has evolved through four OGC Innovation Program testbeds. Testbed 16 (docs 20-016, 20-025r1) introduced the Data Access and Processing API (DAPA) with implicit dimensions (spatial, temporal, variables) but no mechanism to enumerate dimension members; the companion API report explicitly noted that "a mechanism about how to determine the available query parameters in the API was not specified." Testbed 17 (doc 21-027) produced the first draft API specification, defining dimensions via STAC `cube:dimensions` within collection metadata accessed through `GET /collections/{id}` and the Coverages domain set at `GET /collections/{id}/coverage/domainset`. Testbed 19 (docs 23-047, 23-048) refined this into a formal draft submitted to the GeoDataCube Standards Working Group as a work item. Testbed 20 (docs 24-035, 24-037) conducted usability testing across five independent backends, finding only 44% interoperability success and identifying STAC metadata inconsistency as the primary pain point.
+
+The GDC SWG was chartered in May 2023 (OGC doc 22-052, authors: Iacopino, Simonis, Meißl) with the mandate to define a GDC API standard, metadata model, and exchange format recommendations. The charter explicitly scopes "definition of the GDC metadata model" and "analysis of the usability of existing standards" as core work items. The SWG adopts an agile methodology, building from existing OGC Building Blocks (OGC API - Common, Coverages, Processes, STAC, openEO) with minimal extension.
+
+Across all four testbeds and the SWG charter, no specification addresses dimension member pagination. The Testbed 19 Engineering Report (doc 23-047) notes that "pagination is rarely used in openEO implementations" for dimension metadata while acknowledging unbounded growth. The Testbed 20 usability report (doc 24-037) recommends standardized STAC metadata practices but does not address the scalability of dimension value arrays. The ECMWF, participating in both Testbed 19 and the SWG use case development, specifically requested support for "irregular or sparse data content" -- a request acknowledged but not resolved by any testbed specification.
 
 ### 2.3 SDMX and Statistical Standards
 
@@ -251,3 +255,15 @@ The specification is available as open-source JSON Schema with worked examples. 
 15. OGC. Temporal WKT for Calendars SWG. https://external.ogc.org/twiki_public/TemporalDWG/TemporalSWG
 
 16. OGC. Naming Authority Policies and Procedures. OGC doc 09-046r6. https://docs.ogc.org/pol/09-046r6.html
+
+17. OGC. Testbed 17: Geo Data Cube API Engineering Report. OGC doc 21-027. https://docs.ogc.org/per/21-027.html
+
+18. OGC. Testbed 16: Data Access and Processing Engineering Report. OGC doc 20-016. https://docs.ogc.org/per/20-016.html
+
+18b. OGC. Testbed 16: Data Access and Processing API Engineering Report. OGC doc 20-025r1. Editor: Panagiotis (Peter) A. Vretanos. https://docs.ogc.org/per/20-025r1.html
+
+19. OGC. GeoDataCube Standard Working Group Charter. OGC doc 22-052. Authors: Claudio Iacopino, Ingo Simonis, Stephan Meißl. Approved 2023-05-03.
+
+20. OGC. Testbed 20 GDC Usability Testing Report. OGC doc 24-037. https://docs.ogc.org/per/24-037.html
+
+21. Iacopino, C. et al. (2023). Introduction to the OGC Geodatacube Standard Working Group. IEEE International Geoscience and Remote Sensing Symposium (IGARSS). https://ieeexplore.ieee.org/document/10282998

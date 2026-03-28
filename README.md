@@ -18,7 +18,7 @@ Current standards (STAC, OGC Coverages, EDR, openEO) embed dimension members as 
 - Administrative boundary hierarchies (50,000+ members)
 - Non-Gregorian calendars: **dekadal** (36/year) and **pentadal** (72 or 73/year) periods used globally in food security and drought monitoring
 
-OGC Testbed 19 ([doc 23-047](https://docs.ogc.org/per/23-047.html)) and Testbed 20 ([doc 24-035](https://docs.ogc.org/per/24-035.html)) both identified these as open gaps.
+OGC Testbeds 17-20 ([21-027](https://docs.ogc.org/per/21-027.html), [23-047](https://docs.ogc.org/per/23-047.html), [24-035](https://docs.ogc.org/per/24-035.html)) all identified these as open gaps. The GeoDataCube SWG ([charter 22-052](https://portal.ogc.org/files/?artifact_id=104874)) was formed to address datacube interoperability but dimension member scalability remains unresolved.
 
 ## Repository Structure
 
@@ -37,17 +37,17 @@ ogc-dimensions/
 │   ├── manuscript.md         # Paper (Markdown source)
 │   ├── figures/              # Diagrams and schematics
 │   └── references.bib        # Bibliography
-├── testbed/                  # Reference implementation
-│   ├── generators/           # Python generator algorithms
-│   │   ├── base.py           # Abstract generator protocol
-│   │   ├── dekadal.py        # Dekadal generator
-│   │   ├── pentadal.py       # Pentadal generators (monthly + annual)
-│   │   └── integer_range.py  # Integer range generator
-│   ├── api/                  # FastAPI application
-│   │   ├── app.py            # API entry point
-│   │   └── routes.py         # /generate, /extent, /inverse, /search
-│   ├── data/                 # Sample datasets
-│   └── Dockerfile            # One-command demo
+├── reference-implementation/  # Reference implementation (pip: ogc-dimensions)
+│   └── src/ogc_dimensions/
+│       ├── generators/       # Python generator algorithms
+│       │   ├── base.py       # Abstract generator protocol
+│       │   ├── dekadal.py    # Dekadal generator
+│       │   ├── pentadal.py   # Pentadal generators (monthly + annual)
+│       │   └── integer_range.py  # Integer range generator
+│       ├── api/              # FastAPI application
+│       │   ├── app.py        # API entry point
+│       │   └── routes.py     # /generate, /extent, /inverse, /search
+│       └── data/             # Sample datasets
 ├── docs/                     # GitHub Pages documentation
 ├── CHANGELOG.md
 ├── LICENSE                   # Apache-2.0
@@ -56,12 +56,12 @@ ogc-dimensions/
 
 ## Quick Start
 
-### Run the testbed
+### Run the reference implementation
 
 ```bash
-cd testbed
+cd reference-implementation
 pip install -e .
-uvicorn api.app:app --reload
+uvicorn ogc_dimensions.api.app:app --reload
 ```
 
 Or with Docker:
@@ -73,15 +73,46 @@ docker compose up
 Then explore:
 
 ```bash
+# List all registered dimensions
+curl "http://localhost:8000/dimensions"
+
 # Generate dekadal members for 2024
-curl "http://localhost:8000/generators/dekadal/generate?limit=36&offset=0&year=2024"
+curl "http://localhost:8000/dimensions/dekadal/generate?limit=36"
+
+# Generate pentadal-monthly members (72/year, CHIRPS/FAO)
+curl "http://localhost:8000/dimensions/pentadal-monthly/generate?limit=12"
+
+# Generate pentadal-annual members (73/year, GPCP/NOAA)
+curl "http://localhost:8000/dimensions/pentadal-annual/generate?limit=10"
 
 # Inverse: what dekad does January 15 belong to?
-curl "http://localhost:8000/generators/dekadal/inverse?value=2024-01-15"
+curl "http://localhost:8000/dimensions/dekadal/inverse?value=2024-01-15"
 
-# Search: all dekads in Q1 2024
-curl "http://localhost:8000/generators/dekadal/search?min=2024-K01&max=2024-K09"
+# Search: all dekads matching a pattern
+curl "http://localhost:8000/dimensions/dekadal/search?like=2024-K*"
 ```
+
+## Live Demo
+
+A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the [GeoID](https://github.com/un-fao/geoid) catalog platform:
+
+**Swagger UI:** https://data.review.fao.org/geospatial/v2/api/tools/docs
+
+```bash
+# List registered dimensions
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions"
+
+# Dekadal members for 2024
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=36"
+
+# Pentadal-monthly (CHIRPS/FAO)
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=12"
+
+# Inverse mapping
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15"
+```
+
+The reference implementation is deployed as a [Dynastore](https://github.com/un-fao/dynastore) extension on Google Cloud Run. The `ogc-dimensions` package is installed as a pip dependency and mounted via the Dynastore extension protocol -- no code duplication.
 
 ## Conformance Levels
 
@@ -91,27 +122,33 @@ curl "http://localhost:8000/generators/dekadal/search?min=2024-K01&max=2024-K09"
 | **Invertible** | + `/inverse` | Enables ingestion validation |
 | **Searchable** | + `/search` (exact, range, like) | SHOULD support |
 | **Similarity** | + `/search` (vector) | MAY support (AI/ML) |
-| **Intelligent** | + `/embed`, `/project` | Future extension |
+| **Intelligent** | + `/embed` (member → vector), `/project` (2D/3D projection) | Future extension |
 
 ## Standardization Pathway
 
-| Phase | Target | Timeline |
-|---|---|---|
-| A | Scientific publication (EarthArXiv preprint) | Months 0-2 |
-| B | STAC Community Extension PR | Months 2-4 |
-| C | OGC GeoDataCube SWG engagement | Months 3-6 |
-| D | OGC Temporal WKT SWG + Naming Authority | Months 3-9 |
-| E | OGC Testbed participation (optional) | Months 6-18 |
-| F | OGC RFC + formal vote | Months 12-24 |
+This proposal follows the OGC formal standardization process:
+
+1. **Scientific publication** — peer-reviewed paper establishing the technical contribution
+2. **STAC Community Extension** — JSON Schema changes to `stac-extensions/datacube`
+3. **OGC GeoDataCube SWG** — Change Request Proposal for the GeoDataCube specification
+4. **OGC Temporal WKT SWG + Naming Authority** — calendar algorithm definitions and URI registration
+5. **OGC Innovation Program** — testbed participation for interoperability validation
+6. **OGC RFC + formal vote** — candidate specification through the OGC Technical Committee
 
 ## Key References
 
+**OGC GeoDataCube lineage:**
+- [GDC SWG Charter (22-052)](https://portal.ogc.org/files/?artifact_id=104874) — Iacopino, Simonis, Meißl. Approved 2023-05-03.
+- [TB-17 GDC API ER (21-027)](https://docs.ogc.org/per/21-027.html) — first GDC API draft
+- [TB-19 GDC ER (23-047)](https://docs.ogc.org/per/23-047.html) — draft API submitted to SWG
+- [TB-19 Draft API (23-048)](https://docs.ogc.org/per/23-048.html) — OpenAPI spec ([GitHub](https://github.com/m-mohr/geodatacube-api))
+- [TB-20 GDC Profile (24-035)](https://docs.ogc.org/per/24-035.html) — profiles approach
+- [TB-20 Usability Report (24-037)](https://docs.ogc.org/per/24-037.html) — 44% interop success, STAC metadata gaps
+
+**Standards:**
 - [STAC Datacube Extension](https://github.com/stac-extensions/datacube) (issue [#31](https://github.com/stac-extensions/datacube/issues/31))
-- [OGC TB-19 GeoDataCubes ER (23-047)](https://docs.ogc.org/per/23-047.html)
-- [OGC TB-20 GDC Profile (24-035)](https://docs.ogc.org/per/24-035.html)
-- [OGC GeoDataCube SWG](https://www.ogc.org/press-release/ogc-forms-new-geodatacube-standards-working-group/) (formed Jan 2025)
-- [cadati](https://github.com/TUW-GEO/cadati) -- dekadal date arithmetic (MIT)
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12/json-schema-core)
+- [cadati](https://github.com/TUW-GEO/cadati) — dekadal date arithmetic (MIT)
 
 ## Author
 
