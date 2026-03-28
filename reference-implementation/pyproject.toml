@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ogc-dimensions-testbed"
+name = "ogc-dimensions"
 version = "0.1.0"
 description = "Reference implementation for OGC Dimensions: scalable dimension member generators for geospatial datacubes"
 readme = "../README.md"
@@ -34,6 +34,9 @@ dev = [
     "httpx>=0.24",
     "ruff>=0.1",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ogc_dimensions"]
 
 [tool.ruff]
 target-version = "py311"

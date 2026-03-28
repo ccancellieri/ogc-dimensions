@@ -1,12 +1,13 @@
-"""OGC Dimensions Testbed API.
+"""OGC Dimensions Reference Implementation API.
 
 FastAPI application demonstrating the generator specification:
-  /generators/{type}/generate  -- paginated member generation
-  /generators/{type}/extent    -- dimension boundaries
-  /generators/{type}/inverse   -- value-to-coordinate mapping
-  /generators/{type}/search    -- find members by query
+  /dimensions                              -- list registered dimensions
+  /dimensions/{dimension_id}/generate      -- paginated member generation
+  /dimensions/{dimension_id}/extent        -- dimension boundaries
+  /dimensions/{dimension_id}/inverse       -- value-to-coordinate mapping
+  /dimensions/{dimension_id}/search        -- find members by query
 
-Run: uvicorn testbed.api.app:app --reload
+Run: uvicorn ogc_dimensions.api.app:app --reload
 """
 
 from fastapi import FastAPI
@@ -15,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import router
 
 app = FastAPI(
-    title="OGC Dimensions Testbed",
+    title="OGC Dimensions Reference Implementation",
     description=(
         "Reference implementation for the OGC Dimensions specification: "
         "paginated dimension members, algorithmic generators, "
@@ -32,23 +33,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/generators")
+app.include_router(router, prefix="/dimensions")
 
 
 @app.get("/")
 async def root():
     return {
-        "title": "OGC Dimensions Testbed",
+        "title": "OGC Dimensions Reference Implementation",
         "description": "Reference implementation for scalable dimension member dissemination and algorithmic generation.",
         "links": [
             {"rel": "self", "href": "/", "type": "application/json"},
             {"rel": "service-desc", "href": "/openapi.json", "type": "application/json"},
             {"rel": "service-doc", "href": "/docs", "type": "text/html"},
             {
-                "rel": "generators",
-                "href": "/generators",
+                "rel": "dimensions",
+                "href": "/dimensions",
                 "type": "application/json",
-                "title": "Available dimension generators",
+                "title": "Registered dimensions and their generators",
             },
         ],
         "conformsTo": [
