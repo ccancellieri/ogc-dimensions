@@ -283,6 +283,8 @@ The decision to use JSON Schema 2020-12 for both `parameters` and `output` field
 
 The conformance level hierarchy provides a clear adoption path. Most implementations will need only Basic (pagination) and Invertible (validation). Searchable adds significant value for large non-temporal dimensions. Similarity and Intelligent levels document architectural possibilities without imposing requirements, allowing the specification to evolve as AI/ML integration with geospatial standards matures.
 
+The reference implementation has been deployed on the FAO Agro-Informatics Platform review environment, where it serves as a Dynastore extension alongside production STAC catalog services. This deployment validates the integration model: the generator API operates behind a reverse proxy with path prefixes, demonstrating that the HATEOAS link generation and pagination mechanics work correctly in a real infrastructure environment with TLS termination and path-based routing.
+
 A limitation of this work is that the similarity-driven navigation concept remains theoretical. While the architectural extension points are well-defined, production-scale validation of vector search across datacube dimensions requires further research and implementation experience. We intentionally document this as future work rather than normative specification.
 
 ## 8. Conclusion
