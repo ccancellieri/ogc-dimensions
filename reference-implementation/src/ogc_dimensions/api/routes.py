@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from ..generators import (
@@ -27,6 +27,31 @@ from ..generators import (
 from ..generators.base import SearchProtocol
 
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# URL helpers — produce fully-qualified, proxy-aware links
+# ---------------------------------------------------------------------------
+_FORCE_HTTPS: bool = __import__("os").getenv("FORCE_HTTPS", "false").lower() in (
+    "true", "1", "yes",
+)
+
+
+def _self_url(request: Request) -> str:
+    """Full URL of the current request *without* query parameters.
+
+    Respects ``FORCE_HTTPS`` env var for deployments behind TLS-terminating
+    proxies that forward plain HTTP internally.
+    """
+    url = request.url.remove_query_params(keys=request.query_params.keys())
+    scheme = "https" if _FORCE_HTTPS else url.scheme
+    return f"{scheme}://{url.netloc}{url.path.rstrip('/')}"
+
+
+def _parent_url(request: Request, levels_up: int = 1) -> str:
+    """URL *n* path segments above the current request URL."""
+    current = _self_url(request)
+    parts = current.split("/")
+    return "/".join(parts[: -levels_up]) if levels_up else current
 
 
 @dataclass
@@ -84,8 +109,9 @@ def _member_to_dict(m) -> dict[str, Any]:
 
 
 @router.get("/")
-async def list_dimensions():
+async def list_dimensions(request: Request):
     """List registered dimensions and their generator capabilities."""
+    base = _self_url(request)  # e.g. https://host/prefix/dimensions
     return {
         "dimensions": [
             {
@@ -100,11 +126,13 @@ async def list_dimensions():
                 "links": [
                     {
                         "rel": "generate",
-                        "href": f"/dimensions/{dim_id}/generate",
+                        "href": f"{base}/{dim_id}/generate",
+                        "type": "application/json",
                     },
                     {
                         "rel": "extent",
-                        "href": f"/dimensions/{dim_id}/extent",
+                        "href": f"{base}/{dim_id}/extent",
+                        "type": "application/json",
                     },
                 ],
             }
@@ -115,6 +143,7 @@ async def list_dimensions():
 
 @router.get("/{dimension_id}/generate")
 async def generate(
+    request: Request,
     dimension_id: str,
     extent_min: str | None = Query(None, description="Extent minimum (defaults to dimension config)"),
     extent_max: str | None = Query(None, description="Extent maximum (defaults to dimension config)"),
@@ -138,17 +167,19 @@ async def generate(
     else:
         values = [_member_to_dict(m) for m in result.members]
 
+    self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/generate
+
     links = [
-        {"rel": "self", "href": f"/dimensions/{dimension_id}/generate?limit={limit}&offset={offset}", "type": "application/json"},
+        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}", "type": "application/json"},
     ]
     if offset + limit < result.number_matched:
         links.append(
-            {"rel": "next", "href": f"/dimensions/{dimension_id}/generate?limit={limit}&offset={offset + limit}", "type": "application/json"}
+            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}", "type": "application/json"}
         )
     if offset > 0:
         prev_offset = max(0, offset - limit)
         links.append(
-            {"rel": "prev", "href": f"/dimensions/{dimension_id}/generate?limit={limit}&offset={prev_offset}", "type": "application/json"}
+            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}", "type": "application/json"}
         )
 
     return {

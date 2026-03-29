@@ -10,7 +10,7 @@ FastAPI application demonstrating the generator specification:
 Run: uvicorn ogc_dimensions.api.app:app --reload
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routes import router
@@ -37,17 +37,18 @@ app.include_router(router, prefix="/dimensions")
 
 
 @app.get("/")
-async def root():
+async def root(request: Request):
+    base = str(request.base_url).rstrip("/")
     return {
         "title": "OGC Dimensions Reference Implementation",
         "description": "Reference implementation for scalable dimension member dissemination and algorithmic generation.",
         "links": [
-            {"rel": "self", "href": "/", "type": "application/json"},
-            {"rel": "service-desc", "href": "/openapi.json", "type": "application/json"},
-            {"rel": "service-doc", "href": "/docs", "type": "text/html"},
+            {"rel": "self", "href": f"{base}/", "type": "application/json"},
+            {"rel": "service-desc", "href": f"{base}/openapi.json", "type": "application/json"},
+            {"rel": "service-doc", "href": f"{base}/docs", "type": "text/html"},
             {
                 "rel": "dimensions",
-                "href": "/dimensions",
+                "href": f"{base}/dimensions",
                 "type": "application/json",
                 "title": "Registered dimensions and their generators",
             },
