@@ -1,7 +1,9 @@
 {
-  "_comment": "Two pentadal systems shown side by side",
+  "_comment": "Two pentadal systems shown side by side. Both point to the live reference implementation.",
 
   "pentadal_monthly_example": {
+    "type": "Collection",
+    "id": "chirps-pentadal-precipitation",
     "description": "Month-based pentadal (72 periods/year). Each month has 6 pentads of 5 days; P6 absorbs remaining days (26-end). Used by CHIRPS, CDT, FAO.",
     "cube:dimensions": {
       "time": {
@@ -19,17 +21,20 @@
             "required": ["code", "start", "end"]
           },
           "bijective": true,
-          "search": ["exact", "range"],
+          "search": ["exact", "range", "like"],
           "on_invalid": "reject"
         },
         "step": "1P",
         "unit": "pentad",
-        "size": 1800
+        "size": 1800,
+        "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=5"
       }
     }
   },
 
   "pentadal_annual_example": {
+    "type": "Collection",
+    "id": "gpcp-pentadal-precipitation",
     "description": "Year-based pentadal (73 periods/year). Consecutive 5-day periods starting Jan 1. Period 73 has 5 or 6 days (leap year). Used by GPCP, CPC/NOAA.",
     "cube:dimensions": {
       "time": {
@@ -47,11 +52,12 @@
             "required": ["code", "start", "end"]
           },
           "bijective": true,
-          "search": ["exact", "range"]
+          "search": ["exact", "range", "like"]
         },
         "step": "1P",
         "unit": "pentad",
-        "size": 1825
+        "size": 1825,
+        "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/generate?limit=5"
       }
     }
   }

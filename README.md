@@ -98,19 +98,84 @@ A live deployment is available on the FAO Agro-Informatics Platform review envir
 
 **Swagger UI:** https://data.review.fao.org/geospatial/v2/api/tools/docs
 
+### Pagination walkthrough
+
+A dekadal dimension has 36 members per year. With `limit=5`, a client paginates through 8 pages to retrieve all members. Each response includes navigable `next`/`prev` links:
+
 ```bash
-# List registered dimensions
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions"
+# Page 1: first 5 dekads of 2024
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+# → numberMatched: 36, numberReturned: 5
+# → links: [self, next → offset=5]
 
-# Dekadal members for 2024
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=36"
+# Page 2: follow the "next" link
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=5"
+# → links: [self, next → offset=10, prev → offset=0]
 
-# Pentadal-monthly (CHIRPS/FAO)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=12"
-
-# Inverse mapping
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15"
+# Last page: offset=35
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=35"
+# → numberReturned: 1, links: [self, prev → offset=30]
 ```
+
+### Generator capabilities
+
+```bash
+# List all registered dimensions and their capabilities
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/"
+
+# Pentadal-monthly (72/year, CHIRPS/FAO)
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=5"
+
+# Pentadal-annual (73/year, GPCP/NOAA)
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/generate?limit=5"
+
+# Integer range (elevation bands, step=100m)
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/generate?limit=5"
+```
+
+### Bijective inversion
+
+```bash
+# What dekad does January 15 belong to?
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15"
+# → {valid: true, member: "2024-K02", range: {start: "2024-01-11", end: "2024-01-20"}}
+
+# Invalid date → rejected with nearest valid member
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-32"
+# → {valid: false, reason: "Cannot parse '2024-01-32' as a date."}
+```
+
+### Search
+
+```bash
+# Exact match by code
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?exact=2024-K15"
+
+# Range: first 6 dekads of the year
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?min=2024-K01&max=2024-K06"
+
+# Pattern: all dekads in 2024 starting with K1 (K10-K18 = 9 dekads)
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K1*"
+```
+
+### STAC Collection integration
+
+The `values_href` property in a STAC collection points directly to the generator's paginated endpoint. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete collection example where:
+
+```json
+{
+  "cube:dimensions": {
+    "time": {
+      "type": "temporal",
+      "generator": { "type": "dekadal", "bijective": true },
+      "size": 900,
+      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+    }
+  }
+}
+```
+
+Legacy clients follow `values_href` and see standard paginated JSON. Generator-aware clients read the `generator` object and use `/inverse`, `/search`, and format negotiation (`?format=datetime` vs `?format=native`).
 
 The reference implementation is deployed as a [Dynastore](https://github.com/un-fao/dynastore) extension on Google Cloud Run. The `ogc-dimensions` package is installed as a pip dependency and mounted via the Dynastore extension protocol -- no code duplication.
 

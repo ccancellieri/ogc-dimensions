@@ -1,5 +1,9 @@
 {
-  "_comment": "Legacy client compatibility: dekadal dimension producing standard ISO datetimes. Legacy clients hit values_href and see a valid irregular temporal dimension without knowing about dekads.",
+  "_comment": "Legacy client compatibility: dekadal dimension producing standard ISO dates. Legacy clients hit values_href and see a valid irregular temporal dimension without knowing about dekads. The format=datetime parameter ensures ISO output.",
+
+  "type": "Collection",
+  "id": "chirps-dekadal-legacy",
+  "title": "CHIRPS Dekadal (legacy-compatible view)",
   "cube:dimensions": {
     "time": {
       "type": "temporal",
@@ -11,29 +15,34 @@
       },
       "step": null,
       "size": 900,
-      "values_href": "./dimensions/time/values"
+      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&format=datetime"
     }
   },
-  "_values_href_sample_response": {
-    "dimension": "time",
-    "type": "temporal",
-    "numberMatched": 900,
-    "numberReturned": 10,
+
+  "_values_href_response_page1": {
+    "_note": "What a legacy client sees when it follows values_href. Standard ISO dates, standard pagination. No dekadal knowledge required.",
+    "dimension": "dekadal",
+    "generator": "dekadal",
+    "numberMatched": 36,
+    "numberReturned": 5,
     "values": [
-      "2000-01-01",
-      "2000-01-11",
-      "2000-01-21",
-      "2000-02-01",
-      "2000-02-11",
-      "2000-02-21",
-      "2000-03-01",
-      "2000-03-11",
-      "2000-03-21",
-      "2000-04-01"
+      "2024-01-01",
+      "2024-01-11",
+      "2024-01-21",
+      "2024-02-01",
+      "2024-02-11"
     ],
     "links": [
-      {"rel": "self", "href": "./dimensions/time/values?limit=10&offset=0", "type": "application/json"},
-      {"rel": "next", "href": "./dimensions/time/values?limit=10&offset=10", "type": "application/json"}
+      {
+        "rel": "self",
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=0",
+        "type": "application/json"
+      },
+      {
+        "rel": "next",
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=5",
+        "type": "application/json"
+      }
     ]
   }
 }
