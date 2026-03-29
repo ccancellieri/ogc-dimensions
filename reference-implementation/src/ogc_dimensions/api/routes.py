@@ -83,7 +83,7 @@ def _member_to_dict(m) -> dict[str, Any]:
     return d
 
 
-@router.get("")
+@router.get("/")
 async def list_dimensions():
     """List registered dimensions and their generator capabilities."""
     return {
