@@ -80,6 +80,23 @@ We propose two new properties on the STAC Datacube Extension dimension object:
 
 Both properties are backwards-compatible additions. Existing clients that read only the `values` array continue to work for small dimensions. Servers may provide inline `values` for dimensions below an implementation-defined threshold (recommended: 1000 members) while using `values_href` for larger dimensions.
 
+A paginated response follows OGC API - Features conventions:
+
+```json
+{
+  "dimension": "dekadal",
+  "numberMatched": 900,
+  "numberReturned": 5,
+  "values": ["2024-K01", "2024-K02", "2024-K03", "2024-K04", "2024-K05"],
+  "links": [
+    {"rel": "self",  "href": ".../generate?limit=5&offset=0"},
+    {"rel": "next",  "href": ".../generate?limit=5&offset=5"}
+  ]
+}
+```
+
+Clients follow `rel:next` links to retrieve subsequent pages. The `numberMatched` field communicates total cardinality without downloading all values, while `numberReturned` indicates the current page size.
+
 ### 3.2 The Generator Object
 
 Many dimensions follow deterministic rules that make explicit enumeration wasteful. We introduce a `generator` property on any dimension object, applicable to temporal, spatial, and thematic dimensions alike.
@@ -104,9 +121,57 @@ Each generator's OpenAPI specification exposes up to four capabilities: `/genera
 
 Content negotiation through the `format` parameter enables backwards compatibility: `format=datetime` (default) produces standard ISO timestamps that legacy clients understand; `format=native` produces custom notation (e.g., `YYYY-Knn` for dekadal codes); `format=structured` produces full objects with code, start date, end date, and additional metadata.
 
+The following example shows a STAC collection with a dekadal temporal dimension using all three proposed properties:
+
+```json
+{
+  "cube:dimensions": {
+    "time": {
+      "type": "temporal",
+      "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+      "generator": {
+        "type": "dekadal",
+        "api": "http://www.opengis.net/def/generator/ogc/0/dekadal/openapi.json",
+        "parameters": {},
+        "output": {
+          "type": "object",
+          "properties": {
+            "code": {"type": "string", "description": "YYYY-Knn (nn=01..36)"},
+            "start": {"type": "string", "format": "date"},
+            "end": {"type": "string", "format": "date"},
+            "days": {"type": "integer", "minimum": 8, "maximum": 11}
+          },
+          "required": ["code", "start", "end"]
+        },
+        "bijective": true,
+        "search": ["exact", "range", "like"],
+        "on_invalid": "reject"
+      },
+      "step": "1K",
+      "unit": "dekad",
+      "size": 900,
+      "values_href": ".../dimensions/dekadal/generate?limit=100"
+    }
+  }
+}
+```
+
+Legacy clients that do not recognize `generator`, `size`, or `values_href` ignore these properties per standard JSON processing rules. Clients that do recognize `values_href` can follow it to retrieve paginated members without any knowledge of the generation algorithm. For example, a legacy client requesting `?format=datetime` receives standard ISO dates (`["2024-01-01", "2024-01-11", "2024-01-21", ...]`) -- a valid irregular temporal dimension indistinguishable from a traditional `values` array. Generator-aware clients can additionally use `/inverse`, `/search`, and native format negotiation.
+
 ### 3.3 Generator Bijectivity and Dimension Integrity
 
 A generator defines a forward function from parameter space to value space. When a generator is bijective (or more precisely, surjective with deterministic totality), it also defines an inverse function: given an arbitrary value, compute which dimension member it belongs to and its coordinates in parameter space.
+
+For example, the dekadal generator's inverse maps any date to its enclosing dekad:
+
+```
+GET /dimensions/dekadal/inverse?value=2024-01-15
+→ {"valid": true, "member": "2024-K02",
+   "range": {"start": "2024-01-11", "end": "2024-01-20"}}
+
+GET /dimensions/dekadal/inverse?value=2024-01-32
+→ {"valid": false, "reason": "Cannot parse '2024-01-32' as a date."}
+```
 
 The inverse function serves three purposes in datacube management:
 
@@ -142,7 +207,11 @@ Basic and Invertible constitute this proposal's core scope. Searchable is recomm
 
 ### 4.1 Reference Implementation
 
-We provide an open-source reference implementation as a Python package with a FastAPI REST API. The implementation includes four generator types:
+We provide an open-source reference implementation as a Python package (`ogc-dimensions`) with a FastAPI REST API. The source code, JSON Schema specification, and worked examples are available at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license.
+
+A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the GeoID catalog platform (https://github.com/un-fao/geoid). The deployment demonstrates all generator endpoints with full pagination, inverse mapping, and search capabilities. The Swagger UI is accessible at https://data.review.fao.org/geospatial/v2/api/tools/docs, and the `values_href` links in the worked examples point directly to these live endpoints.
+
+The implementation includes four generator types:
 
 - **DekadalGenerator**: 36 periods/year, bijective, searchable (exact, range, like)
 - **PentadalMonthlyGenerator**: 72 periods/year (CHIRPS/FAO variant), bijective, searchable
@@ -184,7 +253,7 @@ A CHIRPS dekadal precipitation collection spanning 2000-2025 would declare a tem
 
 ### 5.2 Large Indicator Catalogs
 
-FAO maintains statistical indicator catalogs with over 10,000 codes spanning agriculture, nutrition, trade, and environmental domains. These indicators serve as dimension members in datacubes combining geospatial layers with statistical data. Without pagination, embedding 10,000 indicator codes in collection metadata is impractical and degrads API performance.
+FAO maintains statistical indicator catalogs with over 10,000 codes spanning agriculture, nutrition, trade, and environmental domains. These indicators serve as dimension members in datacubes combining geospatial layers with statistical data. Without pagination, embedding 10,000 indicator codes in collection metadata is impractical and degrades API performance.
 
 With `values_href`, clients retrieve indicator codes incrementally with filtering support (`?filter=wheat*`). A non-bijective generator with `on_invalid: "accept"` allows the indicator dimension to grow as new codes are introduced, modeling the real-world evolution of statistical classification systems.
 
@@ -260,10 +329,16 @@ The specification is available as open-source JSON Schema with worked examples. 
 
 18. OGC. Testbed 16: Data Access and Processing Engineering Report. OGC doc 20-016. https://docs.ogc.org/per/20-016.html
 
-18b. OGC. Testbed 16: Data Access and Processing API Engineering Report. OGC doc 20-025r1. Editor: Panagiotis (Peter) A. Vretanos. https://docs.ogc.org/per/20-025r1.html
+19. OGC. Testbed 16: Data Access and Processing API Engineering Report. OGC doc 20-025r1. Editor: Panagiotis (Peter) A. Vretanos. https://docs.ogc.org/per/20-025r1.html
 
-19. OGC. GeoDataCube Standard Working Group Charter. OGC doc 22-052. Authors: Claudio Iacopino, Ingo Simonis, Stephan Meißl. Approved 2023-05-03.
+20. OGC. GeoDataCube Standard Working Group Charter. OGC doc 22-052. Authors: Claudio Iacopino, Ingo Simonis, Stephan Meißl. Approved 2023-05-03.
 
-20. OGC. Testbed 20 GDC Usability Testing Report. OGC doc 24-037. https://docs.ogc.org/per/24-037.html
+21. OGC. Testbed 20 GDC Usability Testing Report. OGC doc 24-037. https://docs.ogc.org/per/24-037.html
 
-21. Iacopino, C. et al. (2023). Introduction to the OGC Geodatacube Standard Working Group. IEEE International Geoscience and Remote Sensing Symposium (IGARSS). https://ieeexplore.ieee.org/document/10282998
+22. Iacopino, C. et al. (2023). Introduction to the OGC Geodatacube Standard Working Group. IEEE International Geoscience and Remote Sensing Symposium (IGARSS). https://ieeexplore.ieee.org/document/10282998
+
+23. Cancellieri, C. (2026). OGC Dimensions: Reference Implementation. https://github.com/ccancellieri/ogc-dimensions
+
+24. W3C. RDF Data Cube Vocabulary. https://www.w3.org/TR/vocab-data-cube/
+
+25. OGC. OGC API - Environmental Data Retrieval. OGC doc 19-086r6. https://docs.ogc.org/is/19-086r6/19-086r6.html
