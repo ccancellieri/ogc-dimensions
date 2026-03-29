@@ -27,7 +27,8 @@
         "on_invalid": "reject"
       },
       "unit": "m",
-      "size": 51
+      "size": 51,
+      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/generate?limit=5"
     },
     "x": {
       "type": "spatial",
