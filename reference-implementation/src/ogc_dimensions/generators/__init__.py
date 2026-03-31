@@ -4,7 +4,7 @@ from .base import DimensionGenerator, GeneratorCapability, SearchProtocol
 from .dekadal import DekadalGenerator
 from .pentadal import PentadalMonthlyGenerator, PentadalAnnualGenerator
 from .integer_range import IntegerRangeGenerator
-from .tree import StaticTreeGenerator
+from .tree import StaticTreeGenerator, LeveledTreeGenerator
 
 __all__ = [
     "DimensionGenerator",
@@ -15,4 +15,5 @@ __all__ = [
     "PentadalAnnualGenerator",
     "IntegerRangeGenerator",
     "StaticTreeGenerator",
+    "LeveledTreeGenerator",
 ]
