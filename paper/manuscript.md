@@ -12,7 +12,7 @@ This paper identifies three fundamental gaps in current OGC and STAC standards: 
 
 The generator abstraction is not limited to temporal dimensions. It applies uniformly to any dimension type -- temporal calendars (dekadal, pentadal, ISO week), spatial grid indices, integer ranges, and coded hierarchies. For hierarchical dimensions such as administrative boundary trees and statistical indicator catalogs, we extend the model with a `hierarchy` property supporting two strategies: recursive (each member carries a parent reference) and leveled (hierarchy imposed by named level definitions). We additionally propose two new dimension types, `nominal` and `ordinal`, to express coded dimensions more precisely than the existing `other` fallback. Each generator exposes capabilities through a standard OpenAPI interface: paginated generation, extent computation, optional inverse mapping for bijective generators, optional search across multiple protocols including vector similarity, and optional hierarchical navigation via dedicated `/children` and `/ancestors` endpoints. We define five conformance levels (Basic, Invertible, Searchable, Hierarchical, Similarity) that allow incremental adoption from simple pagination to hierarchical vocabulary navigation.
 
-We validate the approach through a reference implementation demonstrating dekadal, pentadal, integer-range, and hierarchical static-tree generators with full pagination, inverse mapping, search capabilities, and hierarchical navigation. The reference implementation is available as open-source software alongside the formal JSON Schema specification and worked examples for common use cases in agricultural drought monitoring, food security early warning, and administrative boundary management.
+We validate the approach through a reference implementation demonstrating six generator types — dekadal, pentadal-monthly, pentadal-annual, integer-range, static-tree (recursive), and leveled-tree (condition-based) — with full pagination, inverse mapping, search, and hierarchical navigation. The reference implementation is deployed on the FAO Agro-Informatics Platform as twelve named dimensions covering six distinct use cases: temporal calendar interoperability (exposing the incompatibility between two competing pentadal systems as a machine-detectable property), recursive indicator hierarchies, leveled administrative boundary navigation with condition-based level filtering, forestry species classification with combined tree and pattern search, elevation band integrity via bijective inverse, and cross-collection temporal alignment guarantees. Source code, JSON Schema specification, and worked examples are available as open-source software.
 
 ## 1. Introduction
 
@@ -237,15 +237,18 @@ We provide an open-source reference implementation as a Python package (`ogc-dim
 
 A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the GeoID catalog platform (https://github.com/un-fao/geoid). The deployment demonstrates all generator endpoints with full pagination, inverse mapping, and search capabilities. The Swagger UI is accessible at https://data.review.fao.org/geospatial/v2/api/tools/docs, and the `values_href` links in the worked examples point directly to these live endpoints.
 
-The implementation includes five generator types:
+The implementation includes six generator types:
 
 - **DekadalGenerator**: 36 periods/year, bijective, searchable (exact, range, like)
-- **PentadalMonthlyGenerator**: 72 periods/year (CHIRPS/FAO variant), bijective, searchable
-- **PentadalAnnualGenerator**: 73 periods/year (GPCP/NOAA variant), bijective, searchable
+- **PentadalMonthlyGenerator**: 72 periods/year (month-aligned variant used by CHIRPS/FAO), bijective, searchable
+- **PentadalAnnualGenerator**: 73 periods/year (year-aligned variant used by GPCP/CPC/NOAA), bijective, searchable
 - **IntegerRangeGenerator**: configurable step, bijective, searchable (exact, range)
-- **StaticTreeGenerator**: in-memory hierarchical tree (5 continents, 49 countries); Hierarchical and Searchable conformance; not bijective
+- **StaticTreeGenerator**: in-memory recursive tree; Hierarchical and Searchable conformance; not bijective
+- **LeveledTreeGenerator**: extends `StaticTreeGenerator` with a `?level=` filter parameter, supporting condition-based level queries (`?level=0` for root members, `?level=1&parent=X` for children at a specific level)
 
-The temporal and integer-range generators implement the Basic, Invertible, and Searchable conformance levels. The `StaticTreeGenerator` implements the Basic, Searchable, and Hierarchical conformance levels, exposing the `world-admin` demo dimension with `/children`, `/ancestors`, and `?parent=` filter endpoints. Querying `GET /dimensions/world-admin/generate` returns the five root continents; `GET /dimensions/world-admin/children?parent=Africa` returns the 13 African countries in the dataset; `GET /dimensions/world-admin/ancestors?member=ETH` returns the chain `[{code: "Africa", level: 0}, {code: "ETH", level: 1}]`.
+The temporal and integer-range generators implement the Basic, Invertible, and Searchable conformance levels. The `StaticTreeGenerator` implements the Basic, Searchable, and Hierarchical conformance levels. The `LeveledTreeGenerator` extends these with level-based filtering, demonstrating the leveled hierarchy strategy: clients may query by level (obtaining all members at a given depth) or by parent (navigating the tree), or combine both.
+
+The live deployment at https://data.review.fao.org/geospatial/v2/api/tools/docs exposes twelve named dimensions through the geoid DimensionsExtension. Five originate from the ogc-dimensions package defaults (`dekadal`, `pentadal-monthly`, `pentadal-annual`, `integer-range`, `world-admin`). Seven additional dimensions are registered by the DimensionsExtension at startup to illustrate the full capability surface: `temporal-dekadal`, `temporal-pentadal-monthly`, `temporal-pentadal-annual`, `indicator-tree`, `admin-boundaries`, `forestry-species`, and `elevation-bands`. These dimensions are described in detail in Section 5.
 
 ### 4.2 Validation Results
 
@@ -272,29 +275,154 @@ Batch inverse operations process lists of values in a single HTTP request, enabl
 
 ## 5. Use Cases
 
-### 5.1 FAO Agricultural Drought Monitoring
+The six use-case dimensions deployed on the live endpoint collectively demonstrate every conformance level defined in Section 3.5. Each subsection below describes the operational problem, the specific capability gap in current standards, and how the generator specification resolves it. All examples reference the live endpoints at https://data.review.fao.org/geospatial/v2/api/tools/docs.
 
-The FAO ASIS system monitors agricultural drought using dekadal NDVI composites, precipitation estimates, and soil moisture indicators. The system currently maintains a proprietary dimension API with paginated access. Adopting the generator specification would replace this custom implementation with a standards-compliant interface, enabling interoperability with any STAC-compliant client.
+### 5.1 Temporal Calendar Interoperability — Competing Pentadal Systems
 
-A CHIRPS dekadal precipitation collection spanning 2000-2025 would declare a temporal dimension with `generator.type: "dekadal"`, `size: 900`, and `values_href` pointing to the generator's paginated endpoint. Legacy clients hitting `values_href` would receive standard ISO date strings, while advanced clients could use the native dekadal notation and inverse mapping for coordinate computation.
+**Story.** The global meteorological and agricultural monitoring community uses three non-Gregorian temporal calendars operationally: the dekadal (10-day, 36 periods/year), the month-aligned pentadal (5-day, 72 periods/year), and the year-aligned pentadal (5-day, 73 periods/year). The first is standard in early warning systems and drought monitoring (see Section 2.4 and reference [13]). The latter two represent two incompatible encodings of the same conceptual unit — a five-day observation window — adopted independently by different producer communities. Month-aligned pentads are used by rainfall estimation products that align period boundaries to month-end (e.g., CHIRPS [14], CDT, and FAO products); year-aligned pentads are used by global precipitation climatology products that count periods continuously from 1 January without regard for month boundaries (e.g., GPCP, CPC/NOAA).
 
-### 5.2 Large Indicator Catalogs
+The critical interoperability problem is that pentad code `P12` in the month-aligned system and pentad code `P12` in the year-aligned system refer to different calendar intervals. In the month-aligned system, P12 falls within February (the second period of the second month); in the year-aligned system, P12 corresponds to 1–5 March (the twelfth consecutive five-day block from 1 January). A client that joins two collections sharing the label `P12` without knowing which pentadal convention each collection uses will silently produce misaligned results — the kind of systematic error that is difficult to detect because the data values themselves are valid.
 
-FAO maintains statistical indicator catalogs with over 10,000 codes spanning agriculture, nutrition, trade, and environmental domains. These indicators serve as dimension members in datacubes combining geospatial layers with statistical data. Without pagination, embedding 10,000 indicator codes in collection metadata is impractical and degrades API performance.
+**Gap.** No current standard provides a mechanism to declare the calendar convention alongside the dimension metadata. The STAC Datacube Extension `step` field allows `null` for irregular dimensions but provides no way to name the calendar algorithm. Two collections could both declare `"type": "temporal", "step": null` and appear structurally identical while using incompatible period boundaries.
 
-With `values_href`, clients retrieve indicator codes incrementally with filtering support (`?filter=wheat*`). A non-bijective generator with `on_invalid: "accept"` allows the indicator dimension to grow as new codes are introduced, modeling the real-world evolution of statistical classification systems.
+**Solution.** Three temporal dimensions are deployed on the reference endpoint to demonstrate this contrast side by side:
 
-### 5.3 Administrative Boundary Dimensions
+- `temporal-dekadal` — `DekadalGenerator`, 36 periods/year, extent 1950-01-01 to 2050-12-31 (3,636 members across 100 years)
+- `temporal-pentadal-monthly` — `PentadalMonthlyGenerator`, 72 periods/year, month-aligned (7,272 members)
+- `temporal-pentadal-annual` — `PentadalAnnualGenerator`, 73 periods/year, year-aligned (7,373 members)
 
-National and sub-national administrative boundaries represent one of the most widespread hierarchical dimensions in geospatial datacubes. Food security analyses at FAO, for example, require subsetting datasets to country, region, or district level -- operations that presuppose a navigable administrative hierarchy in the dimension metadata. With the GAUL dataset organized as three levels (195 countries, 3,469 ADM1 units, 46,031 ADM2 districts), encoding all 50,000+ administrative codes in a flat `values` array is impractical. The leveled hierarchy strategy encodes this structure efficiently: the dimension metadata declares three levels with `member_id_property`, `parent_id_property`, and level-specific `values_href` endpoints. A client application building a geographic filter begins by fetching `/generate` (root countries), then navigating to `/children?parent=ETH` (Ethiopian ADM1 regions) and `/children?parent=ETH-TIG` (Tigray districts) in response to user selections. Each step retrieves only the members needed, keeping page sizes small and response times predictable regardless of total administrative unit count.
+Each dimension's `generator.type` is a distinct identifier (`dekadal`, `pentadal-monthly`, `pentadal-annual`), enabling clients to detect calendar system mismatches before joining data. The bijective inverse makes the incompatibility explicit and machine-checkable: `GET /dimensions/temporal-pentadal-monthly/inverse?value=1950-P12` and `GET /dimensions/temporal-pentadal-annual/inverse?value=1950-A12` return different date ranges, demonstrating that the same numeric position maps to different calendar intervals in the two systems.
 
-### 5.4 FAO FAOSTAT Indicator Tree
+The 100-year extents are intentional: they produce member counts (3,636 to 7,373) that are impractical to embed in a collection JSON document, directly motivating the `size` + `values_href` pagination mechanism. With `limit=10`, a client retrieves only the first ten periods of any dimension and follows `rel:next` links to advance through the archive. The `numberMatched` field communicates total cardinality in the first response, enabling progress indicators and pre-allocation.
 
-The FAO FAOSTAT database organizes over 10,000 statistical indicators into a four-level recursive hierarchy: domain (12 top-level areas such as Food Security and Production), group (28 thematic groups), indicator (approximately 900 named measures), and sub-indicator (individual time series variants). Prior to the generator approach, making this classification system available as dimension metadata required either a monolithic response listing all 10,000+ codes or a custom API that clients had to learn independently. The recursive hierarchy strategy provides a standard solution: the indicator dimension declares `hierarchy.strategy: "recursive"` with `parent_property: "parent_code"`, and the generator output schema declares `parent_code` as a nullable string field. Clients begin at the root by calling `GET /dimensions/faostat-indicators/generate`, which returns the 12 top-level domains with `parent_code: null`. Following `GET /dimensions/faostat-indicators/children?parent=QC` returns the 28 child indicators of the Food Security domain, paginated at any client-chosen page size. The `/ancestors?member=QC001` endpoint resolves the full path for any indicator code, enabling breadcrumb navigation and regional drill-down in analytical applications. The depth field in the hierarchy metadata (`depth: 4`) informs clients of the maximum tree depth without requiring them to discover it through traversal.
+```
+GET /dimensions/temporal-dekadal/generate?limit=10
+→ {"numberMatched": 3636, "numberReturned": 10,
+   "values": [{"code": "1950-K01", "start": "1950-01-01", "end": "1950-01-10"}, ...],
+   "links": [{"rel": "next", "href": "...?limit=10&offset=10"}]}
 
-### 5.5 Cross-Collection Temporal Alignment
+GET /dimensions/temporal-pentadal-monthly/generate?limit=10
+→ {"numberMatched": 7272, "numberReturned": 10,
+   "values": [{"code": "1950-P01", "start": "1950-01-01", "end": "1950-01-05"}, ...]}
 
-Multiple collections sharing the same temporal cadence (e.g., NDVI, precipitation, and soil moisture, all dekadal) can reference the same generator type. The bijective inverse guarantees that all collections use identical temporal coordinates, preventing alignment errors that arise when different systems independently compute period boundaries.
+GET /dimensions/temporal-pentadal-annual/generate?limit=10
+→ {"numberMatched": 7373, "numberReturned": 10,
+   "values": [{"code": "1950-A01", "start": "1950-01-01", "end": "1950-01-05"}, ...]}
+```
+
+The first period of both pentadal systems happens to coincide (1–5 January). The divergence becomes visible from period 6 onward, and is most acute in February. By deploying all three systems on the same endpoint with the same extent, the reference implementation provides a concrete demonstration that can be used in conformance testing and interoperability workshops.
+
+### 5.2 Statistical Indicator Tree — Recursive Hierarchy
+
+**Story.** International statistical databases organize thousands of indicators into multi-level thematic hierarchies. A food security datacube, for example, structures its indicator dimension across three levels: domain (broad thematic area such as Food Security, Production, or Trade), group (thematic cluster within a domain), and indicator (individual measure with a unit of observation). Clients building analytical dashboards need to navigate this tree progressively — starting from the domains visible in a menu, drilling into groups on user selection, and reaching specific indicators only when needed — rather than loading all 10,000+ codes at startup.
+
+**Gap.** The STAC Datacube `values` array provides a flat enumeration with no parent-child relationships. SDMX hierarchical codelists carry tree structure but return monolithic responses. Neither model supports progressive tree navigation over a paginated REST interface.
+
+**Solution.** The `indicator-tree` dimension uses `StaticTreeGenerator` with a three-level recursive hierarchy: six thematic domains (Food Security, Production, Trade, Environment, Land Use, Employment) as roots; thematic groups as level-1 members with `parent_code` pointing to their domain; and specific indicators as level-2 leaves carrying measurement units. The dimension declares `hierarchy.strategy: "recursive"` with `parent_property: "parent_code"`.
+
+```
+GET /dimensions/indicator-tree/generate
+→ [FS, PROD, TRD, ENV, LND, EMP]   ← 6 root domains
+
+GET /dimensions/indicator-tree/children?parent=FS
+→ [FS-AVL, FS-ACC, FS-UTL, FS-STB]   ← 4 Food Security groups
+
+GET /dimensions/indicator-tree/ancestors?member=FS-AVL-DES
+→ [FS, FS-AVL, FS-AVL-DES]   ← full path: domain → group → indicator
+```
+
+The ancestor chain returned by `/ancestors` enables breadcrumb navigation in user interfaces and resolves partial codes to their full context in automated pipelines. A data ingestion process that receives a batch of values tagged with indicator code `FS-AVL-DES` can call `/ancestors` to verify the full classification path and extract parent-level aggregation keys (`FS-AVL`, `FS`) in a single round-trip.
+
+### 5.3 Administrative Boundaries — Leveled Hierarchy with Condition-Based Filtering
+
+**Story.** Global administrative boundary datasets (such as GAUL [28], GADM, and national NSDIs) provide territorial reference frames for food security, health, and climate analyses. These datasets are organized as strict level hierarchies: continents contain countries, countries contain first-level administrative units (provinces, states, oblasts), and first-level units contain second-level units (districts, counties, woredas). A client building a geographic filter needs to populate a cascade of dropdowns — selecting a continent to narrow the country list, then a country to narrow the region list — without downloading all 50,000+ administrative codes upfront.
+
+**Gap.** The recursive strategy is adequate when each record carries an explicit `parent_code` field. However, many real-world administrative datasets are stored as flat tables with multiple columns (`iso_country`, `adm1_code`, `adm2_code`) rather than an adjacency list. In this case the hierarchy is imposed by level definitions, not encoded as a parent reference in the data itself. The leveled strategy addresses this pattern: each level is defined by the parameters that select its members from the underlying data store, without exposing the internal column structure to the client.
+
+**Solution.** The `admin-boundaries` dimension uses `LeveledTreeGenerator` with 67 nodes across three levels (5 continents at level 0, 33 countries at level 1, 29 sub-national regions for selected countries at level 2). It adds `?level=` parameter support to the `/generate` endpoint, enabling condition-based queries independent of tree navigation:
+
+```
+GET /dimensions/admin-boundaries/generate?level=0
+→ [AFR, AMR, ASI, EUR, OCE]   ← all 5 continents
+
+GET /dimensions/admin-boundaries/generate?level=1
+→ 33 countries   ← all countries, regardless of continent
+
+GET /dimensions/admin-boundaries/generate?level=1&parent=EUR
+→ [DEU, ESP, FRA, GBR, ITA, POL, ROU]   ← European countries only
+
+GET /dimensions/admin-boundaries/generate?level=2&parent=ITA
+→ [ITA-LOM, ITA-LAZ, ITA-CAM, ITA-SIC, ITA-VEN, ITA-PIE, ITA-EMR, ITA-TOS]
+
+GET /dimensions/admin-boundaries/ancestors?member=ITA-LOM
+→ [EUR, ITA, ITA-LOM]   ← full ancestry chain
+```
+
+The `?level=` filter implements the condition-based navigation pattern described in Section 3.6: a client that knows the desired level (e.g., "all countries") retrieves a flat list without tree traversal, while a client performing drill-down navigation combines `level` with `parent` to stay within a subtree. Both patterns use the same endpoint with the same pagination envelope; no separate endpoint or special query language is required.
+
+The region codes follow a natural `{COUNTRY}-{REGION}` structure (e.g., `ITA-LOM`, `ETH-TIG`) that makes pattern-based search directly useful. A client calling `GET /dimensions/admin-boundaries/search?like=ITA*` retrieves Italy and all its regions in a single response, demonstrating that the Searchable and Hierarchical conformance levels complement each other: tree navigation and pattern search are orthogonal capabilities on the same dimension.
+
+### 5.4 Forestry Species Classification — Search on Hierarchical Vocabulary
+
+**Story.** Species classification trees (taxonomies) are a widespread hierarchical dimension in biodiversity, forestry, and land cover datacubes. A forest inventory system might organize its species dimension across three levels: order, family, and species. Clients need two complementary navigation modes: tree traversal (what species belong to family Pinaceae?) and vocabulary search (find all species whose name starts with "Pinus"). Neither mode alone is sufficient — field data often arrives with partial codes or common names that require both searching the vocabulary and resolving the full classification path.
+
+**Gap.** No standard supports combining Hierarchical and Searchable conformance on the same dimension endpoint. Existing tree APIs (SKOS, SDMX) support traversal but not fuzzy name search. Full-text search engines support pattern matching but not tree structure.
+
+**Solution.** The `forestry-species` dimension uses `StaticTreeGenerator` with 29 nodes across three levels: four botanical orders (Pinales, Fagales, Sapindales, Myrtales) as roots; six families; and nineteen species as leaves. Both `exact` and `like` search protocols are enabled alongside `/children` and `/ancestors` navigation.
+
+```
+GET /dimensions/forestry-species/search?like=Pinus*
+→ 4 pine species: Pinus sylvestris, Pinus pinaster, Pinus halepensis, Pinus nigra
+
+GET /dimensions/forestry-species/search?exact=Quercus robur
+→ 1 match: {code: "Quercus robur", label: "Pedunculate Oak", parent_code: "FAGACEAE"}
+
+GET /dimensions/forestry-species/children?parent=FAGACEAE
+→ [Quercus robur, Quercus ilex, Quercus suber, Fagus sylvatica, Castanea sativa]
+
+GET /dimensions/forestry-species/ancestors?member=Pinus sylvestris
+→ [PINALES, PINACEAE, Pinus sylvestris]
+```
+
+This use case corresponds architecturally to vocabulary services such as AGROVOC [29] (FAO agricultural thesaurus, 40,000+ concepts) and GEMET, which combine hierarchical SKOS concept schemes with full-text search. The generator API bridges these vocabulary systems to the STAC dimension model: any SKOS concept scheme can be exposed as a hierarchical, searchable dimension generator through an adaptor that maps `skos:narrower` to `/children` and `skos:prefLabel` pattern queries to `/search?like=`. Clients need not learn SPARQL or the SKOS data model; they use the same dimension API they already know.
+
+### 5.5 Elevation Bands — Bijective Generator and Ingestion Validation
+
+**Story.** Elevation-indexed datasets (terrain analysis products, land cover stratifications, hydrological models) partition the vertical dimension into fixed-size bands. An elevation band dimension with 50 m step from 0 to 8,848 m (the summit of Everest) produces 177 members. When a new raster file is ingested with an elevation tag of `4500`, the system must verify that `4500` maps to a valid band boundary, determine the band index for partitioning, and reject values that fall outside the declared extent.
+
+**Gap.** Integer range dimensions are currently expressed as `"type": "other"` with a `values` array that must be materialized in full. A 50 m step elevation dimension across the full topographic range requires a 177-element array in every collection response. The inverse operation — mapping a raw elevation value to its band — must be reimplemented by every ingestion pipeline.
+
+**Solution.** The `elevation-bands` dimension uses `IntegerRangeGenerator(step=50)` with extent 0–8848 m. It implements the Invertible conformance level: `/inverse` accepts a raw elevation value and returns the enclosing band, its index, and the band's boundary range.
+
+```
+GET /dimensions/elevation-bands/extent
+→ {"native": {"min": 0, "max": 8848}, "size": 177}
+
+GET /dimensions/elevation-bands/inverse?value=4500
+→ {"valid": true, "member": 4500, "index": 90,
+   "range": {"start": 4500, "end": 4550}}
+
+GET /dimensions/elevation-bands/inverse?value=9000
+→ {"valid": false, "reason": "9000 is outside extent [0, 8848]",
+   "nearest": {"member": 8800, "index": 176}}
+
+POST /dimensions/elevation-bands/inverse
+{"values": ["100", "4500", "8800", "9000"], "on_invalid": "reject"}
+→ {"count": 4, "results": [
+    {"valid": true,  "member": 100,  "index": 2},
+    {"valid": true,  "member": 4500, "index": 90},
+    {"valid": true,  "member": 8800, "index": 176},
+    {"valid": false, "reason": "9000 is outside extent [0, 8848]"}
+  ]}
+```
+
+The batch inverse endpoint (POST) is designed for ETL pipeline integration: a process ingesting thousands of elevation-tagged items submits all values in a single request and receives a per-value validity report. The `on_invalid: "reject"` policy causes the entire batch to be flagged when any value falls outside the dimension domain, enforcing strict referential integrity. The `nearest` field in invalid responses assists data repair workflows by suggesting the closest valid band.
+
+### 5.6 Cross-Collection Temporal Alignment
+
+Multiple collections sharing the same temporal cadence — NDVI composites, precipitation estimates, and soil moisture indicators, all at dekadal frequency — must use identical temporal coordinates to be jointly queryable. Without a shared generator definition, independent systems compute period boundaries separately and may introduce off-by-one errors at month boundaries (particularly for the third dekad, which varies between 8 and 11 days depending on the month). By referencing the same `generator.type: "dekadal"` with the same endpoint, all collections in the same platform are guaranteed to use coordinates produced by the same algorithm. The bijective inverse makes this guarantee enforceable at ingestion time: when a new item is inserted into any collection in the system, its temporal value is submitted to `/inverse`, and a mismatch with the expected dekadal boundary produces a hard rejection rather than a silent data quality issue.
+
+The three temporal dimensions deployed on the reference endpoint (`temporal-dekadal`, `temporal-pentadal-monthly`, `temporal-pentadal-annual`) can also be used to demonstrate cross-system misalignment: a test harness can submit the same date to all three `/inverse` endpoints and observe that each returns a different `member` code, making the incompatibility explicit, machine-detectable, and auditable.
 
 ## 6. Standardization Pathway
 
@@ -385,5 +513,9 @@ The specification is available as open-source JSON Schema with worked examples. 
 26. Miles, A. and Bechhofer, S. SKOS Simple Knowledge Organization System Reference. W3C Recommendation, August 2009. https://www.w3.org/TR/skos-reference/
 
 27. STAC API Extensions Contributors. STAC API Children Extension. https://github.com/stac-api-extensions/children
+
+28. FAO. Global Administrative Unit Layers (GAUL). https://www.fao.org/geonetwork/srv/en/metadata.show?id=12691
+
+29. FAO. AGROVOC Multilingual Thesaurus. https://www.fao.org/agrovoc/
 
 28. Food and Agriculture Organization of the United Nations. AGROVOC Multilingual Thesaurus. https://agrovoc.fao.org/
