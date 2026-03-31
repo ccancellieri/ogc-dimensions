@@ -1,8 +1,7 @@
 # Scalable Dimension Member Dissemination and Algorithmic Generation for Geospatial Datacubes
 
 **Carlo Cancellieri**
-Food and Agriculture Organization of the United Nations (FAO), Rome, Italy
-OGC Member
+[https://ccancellieri.github.io/](https://ccancellieri.github.io/)
 
 ## Abstract
 
@@ -119,7 +118,7 @@ The generator object contains the following fields:
 
 - **`output`** (JSON Schema, REQUIRED): The type and structure of each generated member, also defined per JSON Schema 2020-12. Supports simple types (`string` with `format: "date-time"`), integers, and structured objects with multiple fields.
 
-- **`bijective`** (boolean, OPTIONAL, default false): Whether the generator supports inverse operations. See Section 3.3.
+- **`bijective`** (boolean, OPTIONAL, default false): Whether the generator exposes `/inverse` — a well-defined, deterministic lookup from any domain value to exactly one dimension member. The term "bijective" is used as shorthand within this specification; see Section 3.3 for a precise treatment of the mathematical semantics.
 
 - **`search`** (array of strings, OPTIONAL): Supported search protocols (`exact`, `range`, `like`, `vector`).
 
@@ -168,11 +167,13 @@ The following example shows a STAC collection with a dekadal temporal dimension 
 
 Legacy clients that do not recognize `generator`, `size`, or `values_href` ignore these properties per standard JSON processing rules. Clients that do recognize `values_href` can follow it to retrieve paginated members without any knowledge of the generation algorithm. For example, a legacy client requesting `?format=datetime` receives standard ISO dates (`["2024-01-01", "2024-01-11", "2024-01-21", ...]`) -- a valid irregular temporal dimension indistinguishable from a traditional `values` array. Generator-aware clients can additionally use `/inverse`, `/search`, and native format negotiation.
 
-### 3.3 Generator Bijectivity and Dimension Integrity
+### 3.3 Generator Invertibility and Dimension Integrity
 
-A generator defines a forward function from parameter space to value space. When a generator is bijective (or more precisely, surjective with deterministic totality), it also defines an inverse function: given an arbitrary value, compute which dimension member it belongs to and its coordinates in parameter space.
+A generator defines a forward function *f* from the value domain *V* (e.g., all calendar dates) to the set of dimension members *M* (e.g., all dekads). This function is *total* — every element of *V* maps to exactly one member — and *surjective* — every member has at least one preimage in *V*. It is not, in general, injective: many dates belong to the same dekad, and many elevation values fall within the same band. The generator therefore induces an equivalence relation on *V*, partitioning the domain into disjoint intervals, each corresponding to one dimension member. This partition is precisely the *quantization function* of information theory and the *partitioning predicate* of distributed storage systems (Hive, Iceberg, Delta Lake).
 
-For example, the dekadal generator's inverse maps any date to its enclosing dekad:
+We refer to generators that support this partition semantics as *invertible* generators, using the conformance level name Invertible (Section 3.5). In the `generator` object, these generators set `bijective: true`. The term "bijective" is adopted for the field name because it is widely understood in software engineering contexts as meaning "has a well-defined reverse lookup." We acknowledge that strict mathematical bijectivity — a one-to-one correspondence between domain elements and members — would require each dekad to contain exactly one date, which is not the case. The correct description is that the generator's forward function is a surjection from domain values to members, and its `/inverse` endpoint computes the unique member *m* such that *v* falls within the interval defined by *m*. Inverse lookup is thus well-defined and O(1) for all generators implemented here.
+
+When a value falls outside the generator's declared extent — for example, an elevation of 9,000 m in a dimension bounded by 0–8,848 m — the generator reports `valid: false` and, where applicable, identifies the nearest valid member to assist data repair workflows. This failure mode is analogous to a foreign key constraint violation in relational databases: the value exists syntactically but cannot be placed within any dimension member.
 
 ```
 GET /dimensions/dekadal/inverse?value=2024-01-15
@@ -183,15 +184,7 @@ GET /dimensions/dekadal/inverse?value=2024-01-32
 → {"valid": false, "reason": "Cannot parse '2024-01-32' as a date."}
 ```
 
-The inverse function serves three purposes in datacube management:
-
-1. **Ingestion validation**: When a new item is inserted, the system can verify that its dimension values map to valid members. The `on_invalid` policy determines behavior for values outside the dimension's domain: `reject` returns an error (strict referential integrity), `accept` allows the dimension to grow (schema-on-read), and `warn` accepts the item while flagging the anomaly.
-
-2. **Cross-collection consistency**: Multiple collections sharing the same temporal dimension (e.g., NDVI and precipitation, both dekadal) are guaranteed to have aligned coordinates when validated by the same generator.
-
-3. **Data quality metrics**: The ratio of valid to invalid inverse results across a data pipeline is itself a quality metric, measuring what percentage of incoming observations map to valid dimension coordinates.
-
-The inverse operation maps naturally to data engineering concepts: it is analogous to a partitioning function (Hive, Iceberg, Delta Lake), a referential integrity check (foreign key constraints), and a quantization function (information theory). For bijective generators, the `/inverse` endpoint supports both single-value queries (GET) and batch operations (POST) for efficient pipeline processing.
+The invertibility property serves three purposes in datacube management. First, it enables *ingestion validation*: when a new item is inserted, its dimension values are submitted to `/inverse`, and the `on_invalid` policy governs the outcome — `reject` enforces strict referential integrity, `accept` allows schema-on-read expansion, and `warn` flags anomalies without blocking ingestion. Second, it enforces *cross-collection consistency*: multiple collections sharing the same `generator.type` and endpoint are guaranteed to use identical member boundaries, eliminating the off-by-one errors that arise when independent systems compute period boundaries from shared but under-specified conventions. Third, it supports *data quality monitoring*: the ratio of valid to invalid inverse results across an ETL pipeline is a direct measure of alignment between incoming data and the declared dimension structure. For invertible generators, the `/inverse` endpoint supports both single-value queries (GET) and batch operations (POST) for efficient pipeline integration.
 
 ### 3.4 Search and Similarity
 
@@ -211,7 +204,7 @@ We define five conformance levels as an additive hierarchy:
 | Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
 | Similarity | + /search (vector) | MAY support; future work |
 
-Basic constitutes the minimum requirement for any generator implementation. Invertible applies specifically to bijective generators such as temporal calendars and integer ranges, for which the inverse function is deterministic; its concrete use cases are ingestion validation (rejecting items whose dimension values map to no valid member), cross-collection consistency (guaranteeing that collections sharing the same generator type use identical temporal coordinates), and data quality monitoring (tracking the ratio of valid to invalid inverse results across an ETL pipeline). Searchable is recommended for any non-trivial dimension. Hierarchical is required when the dimension declares a `hierarchy` property and is orthogonal to Invertible -- a hierarchical nominal dimension may independently be bijective if its member codes are canonical identifiers (for example, ISO 3166-1 alpha-3 country codes). Similarity documents the architectural runway toward embedding-based dimension navigation without imposing immediate implementation requirements.
+Basic constitutes the minimum requirement for any generator implementation. Invertible applies to generators that implement the partition semantics described in Section 3.3 — that is, generators for which every domain value maps deterministically to exactly one member. Temporal calendars (dekadal, pentadal) and integer ranges satisfy this property; the generator field `bijective: true` signals this capability. Its concrete use cases are ingestion validation (rejecting items whose dimension values fall outside any valid member interval), cross-collection consistency (guaranteeing identical member boundaries across collections sharing the same generator type), and data quality monitoring (tracking the valid-to-invalid ratio of incoming values as a pipeline health metric). Searchable is recommended for any non-trivial dimension. Hierarchical is required when the dimension declares a `hierarchy` property and is orthogonal to Invertible — a hierarchical nominal dimension may independently be invertible if its member codes are canonical identifiers (for example, ISO 3166-1 alpha-3 country codes, where the forward function maps an incoming code to its matching member or reports an error). Similarity documents the architectural runway toward embedding-based dimension navigation without imposing immediate implementation requirements.
 
 ### 3.6 Hierarchical Dimension Members
 
@@ -454,9 +447,11 @@ The hierarchical dimension extension opens a pathway toward formal alignment wit
 
 ## 8. Conclusion
 
-We have presented a backwards-compatible extension to the STAC Datacube dimension model that addresses three fundamental gaps in current geospatial metadata standards: scalable pagination of dimension members, algorithmic generation of deterministic dimensions, and formal inversion for dimension integrity enforcement. The generator abstraction applies uniformly across dimension types and is validated through a reference implementation covering dekadal, pentadal, and integer-range generators with full pagination, inverse mapping, and search capabilities.
+We have presented a backwards-compatible extension to the STAC Datacube dimension model that addresses three fundamental gaps in current geospatial metadata standards. The first is scalable pagination of dimension members via `size` and `values_href`, resolving the practical impossibility of embedding thousands of dimension values in collection metadata. The second is algorithmic generation of deterministic dimensions via the `generator` object, enabling both server-side API access and client-side computation from machine-discoverable OpenAPI definitions. The third is formal invertibility for dimension integrity enforcement: invertible generators define a total surjective function from any domain value to exactly one dimension member, enabling ingestion validation, cross-collection consistency, and ETL quality monitoring through the `/inverse` endpoint. The use of the term `bijective` in the generator field is acknowledged to differ from its strict mathematical meaning — the intended semantics are those of a partition function or quantization, not a one-to-one correspondence — and the paper uses "invertible" where mathematical precision is required.
 
-The specification is available as open-source JSON Schema with worked examples. The reference implementation demonstrates the complete generator API as a FastAPI application. Both artifacts are designed to support the OGC standardization process through the GeoDataCube Standards Working Group and the STAC community extension ecosystem.
+Beyond the core three properties, we have introduced two additional contributions. The `hierarchy` property with recursive and leveled strategies extends the model to tree-structured nominal and ordinal dimensions, providing a standard REST interface for progressive tree navigation that is aligned with the STAC API Children Extension and directly applicable to administrative boundary datasets, statistical indicator catalogs, and species classification systems. Two new dimension types, `nominal` and `ordinal`, improve expressiveness beyond the existing `other` fallback.
+
+The approach is validated through a reference implementation of six generator types deployed as twelve named dimensions on the FAO Agro-Informatics Platform, demonstrating all five conformance levels across six operationally motivated use cases: calendar interoperability between competing pentadal systems, recursive indicator hierarchies, leveled administrative boundary navigation, forestry species search, elevation band integrity, and cross-collection temporal alignment. The specification, JSON Schema, and reference implementation are available as open-source artifacts at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license, and are designed to support the OGC GeoDataCube Standards Working Group and the STAC community extension ecosystem.
 
 ## References
 
