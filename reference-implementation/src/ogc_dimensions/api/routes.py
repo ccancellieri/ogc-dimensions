@@ -7,6 +7,8 @@ Implements the generator capabilities per dimension:
   GET  /dimensions/{dimension_id}/inverse       -- single value inverse
   POST /dimensions/{dimension_id}/inverse       -- batch inverse
   GET  /dimensions/{dimension_id}/search        -- search members
+  GET  /dimensions/{dimension_id}/children      -- direct children of a node
+  GET  /dimensions/{dimension_id}/ancestors     -- ancestor chain for a member
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from ..generators import (
     IntegerRangeGenerator,
     PentadalAnnualGenerator,
     PentadalMonthlyGenerator,
+    StaticTreeGenerator,
 )
 from ..generators.base import SearchProtocol
 
@@ -83,6 +86,15 @@ DIMENSIONS: dict[str, DimensionConfig] = {
         extent_min="0",
         extent_max="5000",
     ),
+    "world-admin": DimensionConfig(
+        generator=StaticTreeGenerator(),
+        description=(
+            "Hierarchical administrative boundaries: 5 continents → 49 countries. "
+            "Demonstrates the Hierarchical conformance level (/children, /ancestors)."
+        ),
+        extent_min="",
+        extent_max="",
+    ),
 }
 
 
@@ -98,6 +110,8 @@ def _get_dimension(dimension_id: str) -> DimensionConfig:
 
 
 def _member_to_dict(m) -> dict[str, Any]:
+    if m.extra:
+        return m.extra
     d: dict[str, Any] = {"value": m.value, "index": m.index}
     if m.code is not None:
         d["code"] = m.code
@@ -150,14 +164,20 @@ async def generate(
     limit: int = Query(100, ge=1, le=10000, description="Max items per page"),
     offset: int = Query(0, ge=0, description="Items to skip"),
     format: str = Query("structured", description="Output format: structured, datetime, native"),
+    parent: str | None = Query(None, description="Filter to direct children of this member code (Hierarchical conformance)"),
 ):
-    """Generate paginated dimension members within extent."""
+    """Generate paginated dimension members within extent.
+
+    For hierarchical dimensions, ``?parent=X`` returns direct children of X,
+    equivalent to ``/children?parent=X``.  Without ``parent``, root members
+    (those with no parent) are returned.
+    """
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
 
-    result = gen.generate(ext_min, ext_max, limit=limit, offset=offset)
+    result = gen.generate(ext_min, ext_max, limit=limit, offset=offset, parent=parent)
 
     values: list[Any]
     if format == "datetime":
@@ -168,21 +188,27 @@ async def generate(
         values = [_member_to_dict(m) for m in result.members]
 
     self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/generate
+    _parent_qs = f"&parent={parent}" if parent else ""
 
     links = [
-        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}", "type": "application/json"},
+        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}{_parent_qs}", "type": "application/json"},
     ]
     if offset + limit < result.number_matched:
         links.append(
-            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}", "type": "application/json"}
+            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}{_parent_qs}", "type": "application/json"}
         )
     if offset > 0:
         prev_offset = max(0, offset - limit)
         links.append(
-            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}", "type": "application/json"}
+            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}{_parent_qs}", "type": "application/json"}
+        )
+    if parent and gen.hierarchical:
+        dim_base = _parent_url(request)  # .../dimensions/{id}
+        links.append(
+            {"rel": "parent", "href": f"{dim_base}/generate?code={parent}", "type": "application/json"}
         )
 
-    return {
+    response: dict[str, Any] = {
         "dimension": dimension_id,
         "generator": gen.generator_type,
         "numberMatched": result.number_matched,
@@ -190,6 +216,9 @@ async def generate(
         "values": values,
         "links": links,
     }
+    if parent:
+        response["parent"] = parent
+    return response
 
 
 @router.get("/{dimension_id}/extent")
@@ -337,4 +366,92 @@ async def search(
         "numberMatched": result.number_matched,
         "numberReturned": result.number_returned,
         "values": [_member_to_dict(m) for m in result.members],
+    }
+
+
+@router.get("/{dimension_id}/children")
+async def children(
+    request: Request,
+    dimension_id: str,
+    parent: str = Query(..., description="Return direct children of this member code"),
+    limit: int = Query(100, ge=1, le=10000, description="Max items per page"),
+    offset: int = Query(0, ge=0, description="Items to skip"),
+):
+    """Return paginated direct children of a hierarchy node.
+
+    Mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children)
+    applied to dimension members rather than STAC Collections.
+    Requires Hierarchical conformance level on the generator.
+    """
+    cfg = _get_dimension(dimension_id)
+    gen = cfg.generator
+    if not gen.hierarchical:
+        raise HTTPException(
+            status_code=501,
+            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            "does not support Hierarchical operations (/children, /ancestors).",
+        )
+
+    result = gen.children(parent, limit=limit, offset=offset)
+
+    self_url = _self_url(request)
+    dim_base = _parent_url(request)
+
+    links = [
+        {"rel": "self", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset}", "type": "application/json"},
+    ]
+    if offset + limit < result.number_matched:
+        links.append(
+            {"rel": "next", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset + limit}", "type": "application/json"}
+        )
+    if offset > 0:
+        prev_offset = max(0, offset - limit)
+        links.append(
+            {"rel": "prev", "href": f"{self_url}?parent={parent}&limit={limit}&offset={prev_offset}", "type": "application/json"}
+        )
+    links.append(
+        {"rel": "parent", "href": f"{dim_base}/generate?code={parent}", "type": "application/json"}
+    )
+
+    return {
+        "dimension": dimension_id,
+        "generator": gen.generator_type,
+        "parent": parent,
+        "numberMatched": result.number_matched,
+        "numberReturned": result.number_returned,
+        "values": [_member_to_dict(m) for m in result.members],
+        "links": links,
+    }
+
+
+@router.get("/{dimension_id}/ancestors")
+async def ancestors(
+    dimension_id: str,
+    member: str = Query(..., description="Return ancestors of this member code"),
+):
+    """Return the ancestor chain for a member, from root to the member (inclusive).
+
+    Requires Hierarchical conformance level on the generator.
+    """
+    cfg = _get_dimension(dimension_id)
+    gen = cfg.generator
+    if not gen.hierarchical:
+        raise HTTPException(
+            status_code=501,
+            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            "does not support Hierarchical operations (/children, /ancestors).",
+        )
+
+    chain = gen.ancestors(member)
+    if not chain:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Member '{member}' not found in dimension '{dimension_id}'.",
+        )
+
+    return {
+        "dimension": dimension_id,
+        "generator": gen.generator_type,
+        "member": member,
+        "ancestors": chain,
     }
