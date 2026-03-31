@@ -217,7 +217,7 @@ This proposal follows the OGC formal standardization process:
 
 ## Author
 
-**Carlo Cancellieri** -- FAO, OGC Member
+**Carlo Cancellieri** -- [ccancellieri.github.io](https://ccancellieri.github.io/)
 
 ## License
 
