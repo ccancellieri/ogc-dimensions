@@ -265,3 +265,49 @@ class StaticTreeGenerator(DimensionGenerator):
         raise NotImplementedError(
             f"StaticTreeGenerator does not support search protocol '{protocol}'."
         )
+
+
+class LeveledTreeGenerator(StaticTreeGenerator):
+    """Tree generator supporting level-based filtering (leveled strategy).
+
+    Extends ``StaticTreeGenerator`` with a ``level`` parameter on ``/generate``.
+    Nodes must carry a ``level`` integer field.  Clients can filter by level
+    (condition-based), by parent (tree navigation), or both::
+
+        ?level=0             → all continents
+        ?level=1             → all countries
+        ?level=1&parent=AFR  → African countries only
+        ?parent=ITA          → Italian regions (children of ITA)
+    """
+
+    @property
+    def generator_type(self) -> str:
+        return "leveled-tree"
+
+    def generate(
+        self,
+        extent_min: Any,
+        extent_max: Any,
+        limit: int = 100,
+        offset: int = 0,
+        **params: Any,
+    ) -> PaginatedResult:
+        level = params.get("level")
+        if level is not None:
+            level_int = int(level)
+            parent: str | None = params.get("parent")
+            candidates = [n for n in self._nodes if n.get("level") == level_int]
+            if parent is not None:
+                candidates = [n for n in candidates if n["parent_code"] == parent]
+            total = len(candidates)
+            page = candidates[offset: offset + limit]
+            members = [_to_member(node, offset + i) for i, node in enumerate(page)]
+            return PaginatedResult(
+                dimension="",
+                number_matched=total,
+                number_returned=len(members),
+                members=members,
+                offset=offset,
+                limit=limit,
+            )
+        return super().generate(extent_min, extent_max, limit, offset, **params)

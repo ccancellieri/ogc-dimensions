@@ -165,19 +165,21 @@ async def generate(
     offset: int = Query(0, ge=0, description="Items to skip"),
     format: str = Query("structured", description="Output format: structured, datetime, native"),
     parent: str | None = Query(None, description="Filter to direct children of this member code (Hierarchical conformance)"),
+    level: int | None = Query(None, description="Hierarchy level filter — return only members at this level (leveled strategy)"),
 ):
     """Generate paginated dimension members within extent.
 
     For hierarchical dimensions, ``?parent=X`` returns direct children of X,
     equivalent to ``/children?parent=X``.  Without ``parent``, root members
-    (those with no parent) are returned.
+    (those with no parent) are returned.  The ``?level=N`` parameter filters
+    to a specific hierarchy level (leveled strategy).
     """
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
 
-    result = gen.generate(ext_min, ext_max, limit=limit, offset=offset, parent=parent)
+    result = gen.generate(ext_min, ext_max, limit=limit, offset=offset, parent=parent, level=level)
 
     values: list[Any]
     if format == "datetime":
@@ -188,19 +190,23 @@ async def generate(
         values = [_member_to_dict(m) for m in result.members]
 
     self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/generate
-    _parent_qs = f"&parent={parent}" if parent else ""
+    _extra_qs = ""
+    if parent:
+        _extra_qs += f"&parent={parent}"
+    if level is not None:
+        _extra_qs += f"&level={level}"
 
     links = [
-        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}{_parent_qs}", "type": "application/json"},
+        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}{_extra_qs}", "type": "application/json"},
     ]
     if offset + limit < result.number_matched:
         links.append(
-            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}{_parent_qs}", "type": "application/json"}
+            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}{_extra_qs}", "type": "application/json"}
         )
     if offset > 0:
         prev_offset = max(0, offset - limit)
         links.append(
-            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}{_parent_qs}", "type": "application/json"}
+            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}{_extra_qs}", "type": "application/json"}
         )
     if parent and gen.hierarchical:
         dim_base = _parent_url(request)  # .../dimensions/{id}
