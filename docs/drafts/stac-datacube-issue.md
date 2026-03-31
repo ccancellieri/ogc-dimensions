@@ -7,7 +7,7 @@
 
 ## Title
 
-Scalable dimension members: `size`, `values_href`, and `generator` properties
+Scalable dimension members: `size`, `values_href`, `generator`, `hierarchy`, and `nominal`/`ordinal` types
 
 ## Body
 
@@ -85,13 +85,52 @@ Generators expose capabilities through standard OpenAPI interfaces:
 - `/inverse` (optional) -- value-to-coordinate mapping for ingestion validation
 - `/search` (optional) -- query-based member discovery
 
+#### 4. `hierarchy` (object, OPTIONAL)
+
+Tree structure for hierarchical dimensions. Two strategies:
+
+- **`recursive`**: Each member carries a `parent_code` field (analogous to `skos:broader`). Root members have `parent_code: null`. Clients navigate via `/children?parent=X` and `/ancestors?member=X`.
+- **`leveled`**: Hierarchy imposed by named level definitions, each with `member_id_property`, `parent_id_property`, `parent_level`, and `parameters` for level-scoped generator filtering. Generalizes SQL `condition`-per-level patterns to a backend-agnostic form.
+
+The generator exposes two new endpoints when `hierarchical: true`:
+- `GET /children?parent=X` — direct children of X (mirrors [STAC API Children Extension](https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members)
+- `GET /ancestors?member=X` — ancestor chain from root to X inclusive
+
+```json
+"admin": {
+  "type": "nominal",
+  "hierarchy": {
+    "strategy": "leveled",
+    "levels": [
+      {"id": "L0", "label": "Country", "size": 195,
+       "member_id_property": "iso_code", "parameters": {"level": 0}},
+      {"id": "L1", "label": "ADM1", "size": 3469,
+       "parent_level": "L0", "member_id_property": "adm1_code",
+       "parent_id_property": "iso_code", "parameters": {"level": 1}}
+    ]
+  },
+  "generator": {"type": "static-tree", "hierarchical": true}
+}
+```
+
+#### 5. New dimension types: `nominal` and `ordinal` (proposed)
+
+The current `type` enum (`spatial`, `temporal`, `bands`, `other`) lacks precision for coded dimensions. Two additions:
+
+- **`nominal`**: Unordered coded dimension whose members are named categories (administrative units, indicator codes, land cover classes). Currently forced to use `other`.
+- **`ordinal`**: Ordered coded dimension whose members have inherent rank (quality flags, severity levels, priority classes). Currently forced to use `other`.
+
+Both are standard statistical terms, already used in geoid's `DatacubeDimensionType`. Implementations that do not recognise these values treat them as unknown and continue processing -- backwards compatible.
+
 ### Backwards compatibility
 
-- `size`, `values_href`, `generator` are all optional additions
+- `size`, `values_href`, `generator`, `hierarchy` are all optional additions
+- `nominal` and `ordinal` are new type enum values; unknown values are already tolerated
 - Existing clients ignore unknown properties
 - `values` still works for small dimensions
 - Legacy clients follow `values_href` and see standard paginated JSON (standard ISO dates when `?format=datetime`)
 - Generator-aware clients get additional capabilities (inverse, search, native notation)
+- Hierarchical clients navigate trees via `/children` and `/ancestors`
 
 ### Resources
 
@@ -104,6 +143,8 @@ Generators expose capabilities through standard OpenAPI interfaces:
   - [pentadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/pentadal.json) -- two pentadal systems (72 + 73/year)
   - [integer-range.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/integer-range.json) -- elevation bands
   - [legacy-bridge.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/legacy-bridge.json) -- backwards compatibility
+  - [admin-hierarchy.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/admin-hierarchy.json) -- leveled hierarchy (GAUL 3-level)
+  - [indicator-tree.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/indicator-tree.json) -- recursive hierarchy (FAOSTAT indicators)
 
 ### OGC testbed evidence
 

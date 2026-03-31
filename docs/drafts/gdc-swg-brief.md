@@ -16,12 +16,14 @@ Carlo Cancellieri, Food and Agriculture Organization of the United Nations (FAO)
 
 ## Summary
 
-This Change Request Proposal introduces three backwards-compatible extensions to the GeoDataCube dimension metadata model that address dimension member scalability -- a gap identified across OGC Testbeds 16-20 and the GDC SWG charter scope.
+This Change Request Proposal introduces five backwards-compatible extensions to the GeoDataCube dimension metadata model that address dimension member scalability and hierarchical vocabulary navigation -- gaps identified across OGC Testbeds 16-20 and the GDC SWG charter scope.
 
 The proposal adds:
 1. **`size`** -- dimension member count (integer, RECOMMENDED)
 2. **`values_href`** -- link to paginated member endpoint (URI, OPTIONAL)
 3. **`generator`** -- algorithmic member generation with OpenAPI discovery (object, OPTIONAL)
+4. **`hierarchy`** -- tree structure for hierarchical dimensions (object, OPTIONAL); two strategies: recursive (parent reference in member data) and leveled (hierarchy imposed by named level definitions)
+5. **`nominal` / `ordinal`** -- two new dimension type values for coded dimensions, more precise than the existing `other` fallback
 
 These properties are applicable to any dimension type (temporal, spatial, thematic) and follow existing OGC API conventions (Common Part 2 pagination, Features numberMatched/numberReturned, RFC 5988 link relations).
 
@@ -57,8 +59,9 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 | Level | Capabilities | Requirement |
 |---|---|---|
 | Basic | /generate + /extent | MUST support |
-| Invertible | + /inverse | Enables ingestion validation |
+| Invertible | + /inverse | Bijective generators only |
 | Searchable | + /search (exact, range, like) | SHOULD support |
+| Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
 | Similarity | + /search (vector) | MAY support (future) |
 
 ### Generator object schema
@@ -93,9 +96,15 @@ The TB-20 pivot from standalone GDC standard to profile/integration approach dir
 - **Reference implementation:** https://github.com/ccancellieri/ogc-dimensions/tree/main/reference-implementation
 - **Live demo (FAO):** https://data.review.fao.org/geospatial/v2/api/tools/docs
 
+## Hierarchical Dimensions and Controlled Vocabulary Gap
+
+A significant body of geospatial data is organized along hierarchical coded dimensions: GAUL administrative boundaries (Country → ADM1 → ADM2, ~50,000 total members), the FAO FAOSTAT indicator tree (Domain → Group → Indicator → Sub-indicator, ~10,000 members), and land cover classification hierarchies. SDMX 3.0 provides `HierarchicalCodelist` structures for statistical classifications, but SDMX structure endpoints return monolithic responses with no pagination. W3C SKOS `skos:broader`/`skos:narrower` encodes hierarchy semantics in RDF but is not accessible as paginated REST dimension metadata. The STAC API Children Extension defines `GET .../children` with `rel:children`/`rel:parent` link relations for Catalog/Collection trees -- the same endpoint contract applied one level lower to dimension member trees would close this gap.
+
+The proposed `hierarchy` property with recursive and leveled strategies generalizes the operational experience of the FAO geoid system, in which hierarchy rules encode SQL conditions per level alongside `item_code_field` and `parent_code_field` column mappings. The `parameters` object per level is the backend-agnostic form of these SQL conditions, keeping implementation details inside the generator while exposing only the parameter values in the specification. The `/children` endpoint contract mirrors the STAC API Children Extension pagination envelope exactly, allowing clients already consuming collection trees via that extension to reuse the same traversal code for dimension member trees.
+
 ## Prior art
 
-The FAO Agricultural Stress Index System (ASIS) has operated a proprietary paginated dimensions API since 2018, demonstrating the practical need in production agricultural monitoring. The present proposal standardizes this operational experience using OGC API conventions.
+The FAO Agricultural Stress Index System (ASIS) has operated a proprietary paginated dimensions API since 2018, demonstrating the practical need in production agricultural monitoring. The FAO geoid catalog system implements production hierarchical dimensions with FIXED and RECURSIVE strategies, SQL-condition-based level filtering, and paginated children queries -- operational experience that directly informs this proposal. The present proposal standardizes this operational experience using OGC API conventions and aligns with the STAC API Children Extension endpoint contract.
 
 ## Requested action
 

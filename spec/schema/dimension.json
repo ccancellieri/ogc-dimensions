@@ -2,14 +2,23 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/dimension.json",
   "title": "Extended Datacube Dimension",
-  "description": "Extends the STAC Datacube Extension dimension object with size, values_href, and generator properties for scalable dimension member dissemination.",
+  "description": "Extends the STAC Datacube Extension dimension object with size, values_href, generator, and hierarchy properties for scalable dimension member dissemination.",
   "type": "object",
   "required": ["type"],
   "properties": {
     "type": {
       "type": "string",
-      "enum": ["spatial", "temporal", "bands", "other"],
-      "description": "Dimension type as defined by the STAC Datacube Extension."
+      "description": "Dimension type. The values 'spatial', 'temporal', and 'bands' are defined by the STAC Datacube Extension. This specification additionally proposes 'nominal' (unordered coded dimension whose members are named categories, such as administrative units or statistical indicator codes) and 'ordinal' (ordered coded dimension whose members have an inherent rank, such as quality flags or severity levels). Existing implementations that do not recognise 'nominal' or 'ordinal' treat them as unknown and continue to process the dimension using other standard properties. The value 'other' remains valid for dimensions that do not fit any of the named types.",
+      "oneOf": [
+        {
+          "enum": ["spatial", "temporal", "bands", "other"],
+          "description": "Standard STAC Datacube Extension types."
+        },
+        {
+          "enum": ["nominal", "ordinal"],
+          "description": "Proposed additions: coded dimensions (nominal = unordered categories; ordinal = ranked categories)."
+        }
+      ]
     },
     "description": {
       "type": "string",
@@ -24,7 +33,7 @@
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
-      "description": "The extent (minimum and maximum values) of the dimension."
+      "description": "The extent (minimum and maximum values) of the dimension. For hierarchical dimensions, this represents the bounds of the entire dimension across all levels."
     },
     "values": {
       "type": "array",
@@ -53,21 +62,28 @@
     "size": {
       "type": "integer",
       "minimum": 0,
-      "description": "Total number of discrete members in this dimension. Allows clients to know cardinality without downloading values. RECOMMENDED."
+      "description": "Total number of discrete members in this dimension. For flat dimensions, this is the total member count. For hierarchical dimensions with leveled strategy, omit this field and use size on individual levels instead; for recursive strategy, retrieve total count from the generator's /extent endpoint. RECOMMENDED for flat and recursive dimensions."
     },
     "values_href": {
       "type": "string",
       "format": "uri-reference",
-      "description": "Link to a paginated endpoint returning dimension values. When present, values MAY be omitted. Relative or absolute URI."
+      "description": "Link to a paginated endpoint returning dimension values. When present, values MAY be omitted. For hierarchical dimensions, this SHOULD point to the root level (coarsest granularity). Relative or absolute URI."
     },
     "generator": {
       "$ref": "generator.json",
       "description": "Algorithmic member generation definition. See generator.json schema."
+    },
+    "hierarchy": {
+      "$ref": "hierarchy.json",
+      "description": "Tree structure definition for hierarchical dimensions. Describes how members are organised into parent/child relationships. Two strategies: 'leveled' for hierarchies imposed by level definitions (the tree is not encoded in member data), and 'recursive' for hierarchies where each member carries a parent reference. See hierarchy.json schema."
     }
   },
   "dependentSchemas": {
     "values_href": {
       "description": "When values_href is provided, values becomes optional."
+    },
+    "hierarchy": {
+      "description": "When hierarchy is provided, the dimension is a hierarchical coded dimension. The type SHOULD be 'nominal' or 'ordinal'. For leveled strategy, size SHOULD be specified per level in hierarchy.levels rather than at the dimension root."
     }
   }
 }

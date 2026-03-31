@@ -21,6 +21,8 @@ class GeneratorCapability(str, enum.Enum):
     EXTENT = "extent"
     INVERSE = "inverse"
     SEARCH = "search"
+    CHILDREN = "children"
+    ANCESTORS = "ancestors"
 
 
 class SearchProtocol(str, enum.Enum):
@@ -39,6 +41,7 @@ class GeneratedMember:
     code: str | None = None
     start: str | None = None
     end: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -98,6 +101,11 @@ class DimensionGenerator(ABC):
         ...
 
     @property
+    def hierarchical(self) -> bool:
+        """Whether this generator supports Hierarchical conformance level."""
+        return False
+
+    @property
     def capabilities(self) -> list[GeneratorCapability]:
         """Supported capabilities."""
         caps = [GeneratorCapability.GENERATE, GeneratorCapability.EXTENT]
@@ -105,6 +113,9 @@ class DimensionGenerator(ABC):
             caps.append(GeneratorCapability.INVERSE)
         if self.search_protocols:
             caps.append(GeneratorCapability.SEARCH)
+        if self.hierarchical:
+            caps.append(GeneratorCapability.CHILDREN)
+            caps.append(GeneratorCapability.ANCESTORS)
         return caps
 
     @property
@@ -152,4 +163,21 @@ class DimensionGenerator(ABC):
         raise NotImplementedError(
             f"Generator '{self.generator_type}' does not support "
             f"search protocol '{protocol}'."
+        )
+
+    def children(
+        self,
+        parent_code: str,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PaginatedResult:
+        """Return paginated direct children of parent_code (Hierarchical conformance)."""
+        raise NotImplementedError(
+            f"Generator '{self.generator_type}' does not support Hierarchical operations."
+        )
+
+    def ancestors(self, member_code: str) -> list[dict[str, Any]]:
+        """Return ancestor chain from root to member_code inclusive (Hierarchical conformance)."""
+        raise NotImplementedError(
+            f"Generator '{self.generator_type}' does not support Hierarchical operations."
         )

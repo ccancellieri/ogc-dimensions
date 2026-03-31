@@ -20,9 +20,10 @@ app = FastAPI(
     description=(
         "Reference implementation for the OGC Dimensions specification: "
         "paginated dimension members, algorithmic generators, "
-        "bijective inversion, and search capabilities."
+        "bijective inversion, search capabilities, and hierarchical dimensions "
+        "(/children, /ancestors) aligned with the STAC API Children Extension."
     ),
-    version="0.1.0",
+    version="0.2.0",
     license_info={"name": "Apache-2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0"},
 )
 
@@ -57,5 +58,6 @@ async def root(request: Request):
             "https://ccancellieri.github.io/ogc-dimensions/spec/conformance/basic",
             "https://ccancellieri.github.io/ogc-dimensions/spec/conformance/invertible",
             "https://ccancellieri.github.io/ogc-dimensions/spec/conformance/searchable",
+            "https://ccancellieri.github.io/ogc-dimensions/spec/conformance/hierarchical",
         ],
     }
