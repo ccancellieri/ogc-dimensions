@@ -5,13 +5,11 @@
 
 ## Abstract
 
-Geospatial datacubes organize Earth observation, climate, and socioeconomic data along multiple dimensions -- spatial coordinates, time, spectral bands, and thematic indicators. Standards such as the STAC Datacube Extension, OGC API - Coverages, and openEO define dimension metadata as inline arrays embedded in collection descriptions. This approach works for dimensions with tens to hundreds of members but becomes impractical when dimensions scale to thousands or millions of values, as commonly occurs in agricultural monitoring systems, long-duration climate records, and statistical indicator catalogs.
+Geospatial datacube standards define dimension metadata as inline arrays embedded in collection descriptions. This approach becomes impractical when dimensions scale to thousands or millions of values, as commonly occurs with non-Gregorian temporal calendars, statistical indicator catalogs, and administrative boundary hierarchies. We identify three gaps across STAC, OGC GeoDataCube API, SDMX, openEO, and nine other surveyed standards: no pagination for dimension members, no algorithmic generation rules for deterministic dimensions, and no inverse validation mechanism for data integrity enforcement.
 
-This paper identifies three fundamental gaps in current OGC and STAC standards: (1) no pagination mechanism for dimension member arrays, (2) no algorithmic generation rules for deterministic dimensions such as non-Gregorian calendars, and (3) no formal inversion mechanism to validate data against dimension definitions at ingestion time. We present a backwards-compatible extension to the STAC Datacube specification introducing three new properties: `size` and `values_href` for paginated access following OGC API - Common conventions, and a `generator` object that encapsulates algorithmic member generation with machine-discoverable OpenAPI definitions.
+We present a backwards-compatible extension to the STAC Datacube specification introducing three properties: `size` and `href` for paginated access following OGC API conventions, and a `generator` object that encapsulates algorithmic member generation with machine-discoverable OpenAPI definitions. The generator abstraction applies uniformly to temporal calendars, integer ranges, and coded hierarchies. For hierarchical dimensions, a `hierarchy` property provides tree metadata while the generator type determines the navigation strategy -- adding new strategies requires only new generator types, not schema changes. Five conformance levels (Basic, Invertible, Searchable, Hierarchical, Similarity) allow incremental adoption.
 
-The generator abstraction is not limited to temporal dimensions. It applies uniformly to any dimension type -- temporal calendars (dekadal, pentadal, ISO week), spatial grid indices, integer ranges, and coded hierarchies. For hierarchical dimensions such as administrative boundary trees and statistical indicator catalogs, we extend the model with a `hierarchy` property supporting two strategies: recursive (each member carries a parent reference) and leveled (hierarchy imposed by named level definitions). We additionally propose two new dimension types, `nominal` and `ordinal`, to express coded dimensions more precisely than the existing `other` fallback. Each generator exposes capabilities through a standard OpenAPI interface: paginated generation, extent computation, optional inverse mapping for bijective generators, optional search across multiple protocols including vector similarity, and optional hierarchical navigation via dedicated `/children` and `/ancestors` endpoints. We define five conformance levels (Basic, Invertible, Searchable, Hierarchical, Similarity) that allow incremental adoption from simple pagination to hierarchical vocabulary navigation.
-
-We validate the approach through a reference implementation demonstrating six generator types — dekadal, pentadal-monthly, pentadal-annual, integer-range, static-tree (recursive), and leveled-tree (condition-based) — with full pagination, inverse mapping, search, and hierarchical navigation. The reference implementation is deployed on the FAO Agro-Informatics Platform as twelve named dimensions covering six distinct use cases: temporal calendar interoperability (exposing the incompatibility between two competing pentadal systems as a machine-detectable property), recursive indicator hierarchies, leveled administrative boundary navigation with condition-based level filtering, forestry species classification with combined tree and pattern search, elevation band integrity via bijective inverse, and cross-collection temporal alignment guarantees. Source code, JSON Schema specification, and worked examples are available as open-source software.
+We validate the approach through six generator types deployed as twelve dimensions on the FAO Agro-Informatics Platform, covering calendar interoperability, hierarchical vocabulary navigation, and cross-collection alignment. Source code, JSON Schema, and worked examples are available as open-source software.
 
 ## 1. Introduction
 
@@ -29,7 +27,7 @@ No existing standard addresses these gaps comprehensively. SDMX 3.0 provides str
 
 This paper presents a unified solution through three backwards-compatible additions to the STAC Datacube dimension model:
 
-1. **Paginated access** via `size` (member count) and `values_href` (link to a paginated endpoint) following OGC API - Common Part 2 conventions.
+1. **Paginated access** via `size` (member count) and `href` (link to a paginated endpoint) following OGC API - Common Part 2 conventions.
 
 2. **Algorithmic generation** via a `generator` object that encapsulates deterministic rules for producing dimension members, with machine-discoverable OpenAPI definitions enabling both client-side computation and server-side API calls.
 
@@ -53,6 +51,8 @@ The GDC SWG was chartered in May 2023 (OGC doc 22-052, authors: Iacopino, Simoni
 
 Across all four testbeds and the SWG charter, no specification addresses dimension member pagination. The Testbed 19 Engineering Report (doc 23-047) notes that "pagination is rarely used in openEO implementations" for dimension metadata while acknowledging unbounded growth. The Testbed 20 usability report (doc 24-037) recommends standardized STAC metadata practices but does not address the scalability of dimension value arrays. The ECMWF, participating in both Testbed 19 and the SWG use case development, specifically requested support for "irregular or sparse data content" -- a request acknowledged but not resolved by any testbed specification.
 
+openEO defines its own dimension model through a closed `DimensionType` enum (`spatial`, `temporal`, `bands`, `geometry`, `other`) and exposes dimension metadata via `GET /collections/{id}` using the same `cube:dimensions` structure as STAC. Dimension members appear as inline `values` arrays or are derived from `extent` and `step`. The openEO process graph model treats dimensions as named references within chained operations (e.g., `filter_temporal`, `reduce_dimension`) but never retrieves or paginates members independently -- the backend resolves member sets at execution time. This design works well when backends know their own dimensions, but it means that openEO metadata responses share the same scalability limitation as STAC: large or algorithmically defined dimensions cannot be communicated to clients without embedding the full member list. The generator extension is compatible with openEO's `cube:dimensions` structure because it adds optional properties (`size`, `href`, `generator`) that openEO clients can ignore per standard JSON processing. An openEO backend could expose generator endpoints alongside its existing collection metadata, allowing advanced clients to paginate or invert dimension members while standard openEO clients continue to function unchanged.
+
 ### 2.3 SDMX and Statistical Standards
 
 The Statistical Data and Metadata eXchange (SDMX) 3.0 provides the most mature structural metadata model through Data Structure Definitions (DSDs) and Codelists. SDMX achieves complete decoupling of dimension structure from data payload. However, SDMX structure endpoints do not support pagination -- codelists are returned as monolithic responses. SDMX 3.0 adds GeoCodelist and GeoGridCodelist for spatial dimensions, acknowledging the need for geospatial integration, but these additions address type expressiveness rather than scalability.
@@ -75,6 +75,23 @@ The STAC API Children Extension (`https://api.stacspec.org/v1.0.0-rc.2/children`
 
 The FAO Agricultural Stress Index System (ASIS) implements a proprietary dimensions API at `https://data.apps.fao.org/gismgr/api/v2/catalog`. This API provides paginated dimension listing and paginated member enumeration through a 4-level resource hierarchy (workspaces, dimensions, members, member detail). The ASIS API demonstrates the practical need for paginated dimension access in production agricultural monitoring systems. However, it uses a non-standard pagination model (page-based rather than offset-based), wraps responses in a custom envelope, and models dekadal periods as categorical ("WHAT" type) rather than temporal. The present work draws on this operational experience while aligning with OGC API conventions.
 
+### 2.7 Comparative Summary
+
+Table 1 summarizes the capabilities surveyed across existing standards and this proposal. No existing standard addresses all four requirements simultaneously.
+
+| Standard / System | Paginated members | Algorithmic generation | Inverse validation | Hierarchical navigation |
+|---|---|---|---|---|
+| STAC Datacube Ext. (v2.2) | No (`values` inline) | No | No | No |
+| OGC GDC API (TB-17–20) | No (inherits STAC) | No | No | No |
+| OGC API - EDR | No (custom params) | No | No | No |
+| SDMX 3.0 | No (monolithic) | No | No | Yes (HierarchicalCodelist) |
+| W3C SKOS | N/A (RDF layer) | No | No | Yes (broader/narrower) |
+| RDF Data Cube Vocabulary | N/A (RDF layer) | No | No | No |
+| openEO | No (inline arrays) | No | No | No |
+| CF Conventions | No (file-level) | No | No | No |
+| FAO ASIS API | Yes (proprietary) | No | No | No |
+| **This proposal** | **Yes** (OGC API) | **Yes** (OpenAPI) | **Yes** (`/inverse`) | **Yes** (`/children`, `/ancestors`) |
+
 ## 3. Specification
 
 ### 3.1 Paginated Dimension Members
@@ -83,9 +100,9 @@ We propose two new properties on the STAC Datacube Extension dimension object:
 
 **`size`** (integer, RECOMMENDED): The total number of discrete members in the dimension. This allows clients to assess cardinality without downloading any values. The property aligns with the existing community request in STAC Datacube Extension issue #31.
 
-**`values_href`** (string, URI, OPTIONAL): A link to a paginated endpoint returning dimension values. When present, the `values` array MAY be omitted. The endpoint follows OGC API - Common Part 2 pagination conventions with `limit` and `offset` query parameters. Responses include `numberMatched` and `numberReturned` fields following the OGC API - Features convention, and `rel:next`/`rel:prev` link relations per RFC 5988.
+**`href`** (string, URI, OPTIONAL): A link to a paginated endpoint returning dimension values. When present, the `values` array MAY be omitted. The endpoint follows OGC API - Common Part 2 pagination conventions with `limit` and `offset` query parameters. Responses include `numberMatched` and `numberReturned` fields following the OGC API - Features convention, and `rel:next`/`rel:prev` link relations per RFC 5988.
 
-Both properties are backwards-compatible additions. Existing clients that read only the `values` array continue to work for small dimensions. Servers may provide inline `values` for dimensions below an implementation-defined threshold (recommended: 1000 members) while using `values_href` for larger dimensions.
+Both properties are backwards-compatible additions. Existing clients that read only the `values` array continue to work for small dimensions. Servers may provide inline `values` for dimensions below an implementation-defined threshold (recommended: 1000 members) while using `href` for larger dimensions.
 
 A paginated response follows OGC API - Features conventions:
 
@@ -118,7 +135,7 @@ The generator object contains the following fields:
 
 - **`output`** (JSON Schema, REQUIRED): The type and structure of each generated member, also defined per JSON Schema 2020-12. Supports simple types (`string` with `format: "date-time"`), integers, and structured objects with multiple fields.
 
-- **`bijective`** (boolean, OPTIONAL, default false): Whether the generator exposes `/inverse` — a well-defined, deterministic lookup from any domain value to exactly one dimension member. The term "bijective" is used as shorthand within this specification; see Section 3.3 for a precise treatment of the mathematical semantics.
+- **`invertible`** (boolean, OPTIONAL, default false): Whether the generator exposes `/inverse` — a well-defined, deterministic lookup from any domain value to exactly one dimension member. See Section 3.3 for the mathematical semantics.
 
 - **`search`** (array of strings, OPTIONAL): Supported search protocols (`exact`, `range`, `like`, `vector`).
 
@@ -126,7 +143,9 @@ The generator object contains the following fields:
 
 - **`hierarchical`** (boolean, OPTIONAL, default false): Whether the generator supports Hierarchical conformance level -- `/children`, `/ancestors`, and the `?parent=` filter on `/generate`. This property should be `true` when the dimension declares a `hierarchy` property. See Section 3.6.
 
-Each generator's OpenAPI specification exposes up to four capabilities: `/generate` for paginated member production, `/extent` for boundary computation, `/search` for query-based member discovery, and `/inverse` for value-to-coordinate mapping. The `/generate` endpoint is unified with `values_href` -- both point to the same paginated interface.
+- **`navigable`** (boolean, OPTIONAL, default false): Whether the generator supports per-member navigation links (`rel:children`, `rel:ancestors`) when clients request them via `?links=true`. Requires `hierarchical: true`. By default, member-level links are suppressed to minimize response size; response-level pagination links (`self`, `next`, `prev`) are always included.
+
+Each generator's OpenAPI specification exposes up to four capabilities: `/generate` for paginated member production, `/extent` for boundary computation, `/search` for query-based member discovery, and `/inverse` for value-to-coordinate mapping. The `/generate` endpoint is unified with `href` -- both point to the same paginated interface.
 
 Content negotiation through the `format` parameter enables backwards compatibility: `format=datetime` (default) produces standard ISO timestamps that legacy clients understand; `format=native` produces custom notation (e.g., `YYYY-Knn` for dekadal codes); `format=structured` produces full objects with code, start date, end date, and additional metadata.
 
@@ -152,26 +171,26 @@ The following example shows a STAC collection with a dekadal temporal dimension 
           },
           "required": ["code", "start", "end"]
         },
-        "bijective": true,
+        "invertible": true,
         "search": ["exact", "range", "like"],
         "on_invalid": "reject"
       },
-      "step": "1K",
+      "step": null,
       "unit": "dekad",
       "size": 900,
-      "values_href": ".../dimensions/dekadal/generate?limit=100"
+      "href": ".../dimensions/dekadal/generate?limit=100"
     }
   }
 }
 ```
 
-Legacy clients that do not recognize `generator`, `size`, or `values_href` ignore these properties per standard JSON processing rules. Clients that do recognize `values_href` can follow it to retrieve paginated members without any knowledge of the generation algorithm. For example, a legacy client requesting `?format=datetime` receives standard ISO dates (`["2024-01-01", "2024-01-11", "2024-01-21", ...]`) -- a valid irregular temporal dimension indistinguishable from a traditional `values` array. Generator-aware clients can additionally use `/inverse`, `/search`, and native format negotiation.
+Legacy clients that do not recognize `generator`, `size`, or `href` ignore these properties per standard JSON processing rules. Clients that do recognize `href` can follow it to retrieve paginated members without any knowledge of the generation algorithm. For example, a legacy client requesting `?format=datetime` receives standard ISO dates (`["2024-01-01", "2024-01-11", "2024-01-21", ...]`) -- a valid irregular temporal dimension indistinguishable from a traditional `values` array. Generator-aware clients can additionally use `/inverse`, `/search`, and native format negotiation.
 
 ### 3.3 Generator Invertibility and Dimension Integrity
 
 A generator defines a forward function *f* from the value domain *V* (e.g., all calendar dates) to the set of dimension members *M* (e.g., all dekads). This function is *total* — every element of *V* maps to exactly one member — and *surjective* — every member has at least one preimage in *V*. It is not, in general, injective: many dates belong to the same dekad, and many elevation values fall within the same band. The generator therefore induces an equivalence relation on *V*, partitioning the domain into disjoint intervals, each corresponding to one dimension member. This partition is precisely the *quantization function* of information theory and the *partitioning predicate* of distributed storage systems (Hive, Iceberg, Delta Lake).
 
-We refer to generators that support this partition semantics as *invertible* generators, using the conformance level name Invertible (Section 3.5). In the `generator` object, these generators set `bijective: true`. The term "bijective" is adopted for the field name because it is widely understood in software engineering contexts as meaning "has a well-defined reverse lookup." We acknowledge that strict mathematical bijectivity — a one-to-one correspondence between domain elements and members — would require each dekad to contain exactly one date, which is not the case. The correct description is that the generator's forward function is a surjection from domain values to members, and its `/inverse` endpoint computes the unique member *m* such that *v* falls within the interval defined by *m*. Inverse lookup is thus well-defined and O(1) for all generators implemented here.
+We refer to generators that support this partition semantics as *invertible* generators, using the conformance level name Invertible (Section 3.5). In the `generator` object, these generators set `invertible: true`. The generator's forward function is a total surjection from domain values to members, and its `/inverse` endpoint computes the unique member *m* such that *v* falls within the interval defined by *m*. Inverse lookup is thus well-defined and O(1) for all generators implemented here.
 
 When a value falls outside the generator's declared extent — for example, an elevation of 9,000 m in a dimension bounded by 0–8,848 m — the generator reports `valid: false` and, where applicable, identifies the nearest valid member to assist data repair workflows. This failure mode is analogous to a foreign key constraint violation in relational databases: the value exists syntactically but cannot be placed within any dimension member.
 
@@ -199,28 +218,28 @@ We define five conformance levels as an additive hierarchy:
 | Level | Capabilities | Requirement |
 |---|---|---|
 | Basic | /generate + /extent | MUST support |
-| Invertible | + /inverse | Bijective generators only |
+| Invertible | + /inverse | Invertible generators only |
 | Searchable | + /search (exact, range, like) | SHOULD support |
 | Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
 | Similarity | + /search (vector) | MAY support; future work |
 
-Basic constitutes the minimum requirement for any generator implementation. Invertible applies to generators that implement the partition semantics described in Section 3.3 — that is, generators for which every domain value maps deterministically to exactly one member. Temporal calendars (dekadal, pentadal) and integer ranges satisfy this property; the generator field `bijective: true` signals this capability. Its concrete use cases are ingestion validation (rejecting items whose dimension values fall outside any valid member interval), cross-collection consistency (guaranteeing identical member boundaries across collections sharing the same generator type), and data quality monitoring (tracking the valid-to-invalid ratio of incoming values as a pipeline health metric). Searchable is recommended for any non-trivial dimension. Hierarchical is required when the dimension declares a `hierarchy` property and is orthogonal to Invertible — a hierarchical nominal dimension may independently be invertible if its member codes are canonical identifiers (for example, ISO 3166-1 alpha-3 country codes, where the forward function maps an incoming code to its matching member or reports an error). Similarity documents the architectural runway toward embedding-based dimension navigation without imposing immediate implementation requirements.
+Basic constitutes the minimum requirement for any generator implementation. Invertible applies to generators that implement the partition semantics described in Section 3.3 — that is, generators for which every domain value maps deterministically to exactly one member. Temporal calendars (dekadal, pentadal) and integer ranges satisfy this property; the generator field `invertible: true` signals this capability. Its concrete use cases are ingestion validation (rejecting items whose dimension values fall outside any valid member interval), cross-collection consistency (guaranteeing identical member boundaries across collections sharing the same generator type), and data quality monitoring (tracking the valid-to-invalid ratio of incoming values as a pipeline health metric). Searchable is recommended for any non-trivial dimension. Hierarchical is required when the dimension declares a `hierarchy` property and is orthogonal to Invertible — a hierarchical nominal dimension may independently be invertible if its member codes are canonical identifiers (for example, ISO 3166-1 alpha-3 country codes, where the forward function maps an incoming code to its matching member or reports an error). Similarity documents the architectural runway toward embedding-based dimension navigation without imposing immediate implementation requirements.
 
 ### 3.6 Hierarchical Dimension Members
 
-Many dimension types in geospatial datacubes are inherently hierarchical. Administrative boundaries follow a well-defined tree: countries subdivide into regions, regions into districts, districts into localities. The FAO Global Administrative Unit Layers (GAUL) organizes 195 countries into 3,469 first-level administrative units and 46,031 second-level units across three hierarchy levels. Statistical indicator catalogs are similarly organized: the FAO FAOSTAT database groups over 10,000 indicators into domains, groups, and subgroups across four levels. Land cover classifications, OGC feature type hierarchies, and SDMX-coded dimensions exhibit comparable structures. For dimensions of this kind, enumeration via a flat `values` array or a single `values_href` is insufficient -- clients must navigate the tree to discover relevant members, and embedding the entire hierarchy in a single paginated stream discards structural information that enables efficient subsetting and display.
+Many dimension types in geospatial datacubes are inherently hierarchical. Administrative boundaries follow a well-defined tree: countries subdivide into regions, regions into districts, districts into localities. The FAO Global Administrative Unit Layers (GAUL) organizes 195 countries into 3,469 first-level administrative units and 46,031 second-level units across three hierarchy levels. Statistical indicator catalogs are similarly organized: the FAO FAOSTAT database groups over 10,000 indicators into domains, groups, and subgroups across four levels. Land cover classifications, OGC feature type hierarchies, and SDMX-coded dimensions exhibit comparable structures. For dimensions of this kind, enumeration via a flat `values` array or a single `href` is insufficient -- clients must navigate the tree to discover relevant members, and embedding the entire hierarchy in a single paginated stream discards structural information that enables efficient subsetting and display.
 
 We introduce a `hierarchy` property on the dimension object that describes the tree structure and the strategy used to encode it. Two strategies are defined. The recursive strategy is used when the hierarchy is encoded directly inside the data: each member's generator output includes a field whose value is the code of its parent, or null for root members. This mirrors the semantics of W3C SKOS `skos:broader`, where each concept declares its broader (parent) concept. Clients navigate the tree by requesting root members (those whose parent field is null) and then following `/children` links for each node of interest. For the FAOSTAT indicator tree, a generator output object carries a `parent_code` field typed as `string | null`, and the `hierarchy.parent_property` field names this field so that clients and servers can identify it without prior knowledge of the domain-specific schema.
 
 The leveled strategy is used when the hierarchy is not encoded in the data itself but is imposed by named level definitions. This pattern arises when the underlying data store is a flat table with multiple columns representing different hierarchical levels: a row might carry `iso_code`, `adm1_code`, and `adm2_code` simultaneously, and the tree structure is derived by grouping rows by level rather than read from a parent reference field. Each level in the `levels` array specifies: `id` (a unique level identifier), `label` (a human-readable name), `parent_level` (the `id` of the parent level, absent on the root), `member_id_property` (which output field uniquely identifies members at this level), `parent_id_property` (which output field identifies the parent member at the parent level), and a `parameters` object encoding the generator parameters needed to filter members to this level. The `parameters` object is the backend-agnostic generalization of a SQL `WHERE` clause or CQL filter: the implementation details of how the filter is applied remain inside the generator, while the specification exposes only the parameter values. This design generalizes the operational experience of the geoid system, in which hierarchy rules encode SQL conditions per level alongside `item_code_field` and `parent_code_field` column mappings.
 
-Two generator endpoints implement tree navigation at the Hierarchical conformance level. The `GET /{dimension_id}/children?parent=X` endpoint returns the direct children of member X, using the same pagination envelope (`numberMatched`, `numberReturned`, `links`) as the `/generate` endpoint. The response additionally includes the parent code and a `rel:parent` link relation pointing to the parent member, mirroring the STAC API Children Extension's link relation conventions. The `GET /{dimension_id}/ancestors?member=X` endpoint returns the complete ancestor chain from root to member X inclusive, ordered from coarsest to finest granularity. For backwards compatibility, the existing `/generate` endpoint accepts an optional `?parent=X` query parameter as an alias for `/children?parent=X`, allowing clients that already use `values_href` for pagination to navigate the hierarchy without learning a new endpoint pattern.
+Two generator endpoints implement tree navigation at the Hierarchical conformance level. The `GET /{dimension_id}/children?parent=X` endpoint returns the direct children of member X, using the same pagination envelope (`numberMatched`, `numberReturned`, `links`) as the `/generate` endpoint. The response additionally includes the parent code and a `rel:parent` link relation pointing to the parent member, mirroring the STAC API Children Extension's link relation conventions. The `GET /{dimension_id}/ancestors?member=X` endpoint returns the complete ancestor chain from root to member X inclusive, ordered from coarsest to finest granularity. For backwards compatibility, the existing `/generate` endpoint accepts an optional `?parent=X` query parameter as an alias for `/children?parent=X`, allowing clients that already use `href` for pagination to navigate the hierarchy without learning a new endpoint pattern.
 
 The distinction between the two navigation endpoints reflects distinct client use cases. A mapping application rendering a country selector first calls `/children` with no parent (obtaining root members) to populate a continent dropdown, then calls `/children?parent=Africa` on user selection to populate a country dropdown. A data pipeline that receives an incoming observation labeled with a sub-national code calls `/ancestors?member=ETH-TIG` to resolve the full administrative path, validating the code against the dimension hierarchy and obtaining the ancestor codes needed for regional aggregation. Both operations are analogous to standard tree operations in relational systems (adjacency list queries) and graph databases (breadth-first traversal), expressed as a RESTful paginated API that requires no query language.
 
 The STAC Datacube Extension currently defines dimension types as `spatial`, `temporal`, `bands`, and `other`. Administrative boundaries, indicator codes, land cover classes, and similar dimensions fall into `other` by default, which provides no semantic information. We propose two new type values: `nominal` for unordered coded dimensions whose members are named categories without inherent rank (administrative units, indicator codes, species classifications), and `ordinal` for ordered coded dimensions whose members have an inherent rank or severity order (quality flags, data confidence levels, hazard severity classes). Both terms are established in statistical taxonomy and dimensional analytics, are already used in the geoid system's `DatacubeDimensionType` enumeration, and are backwards-compatible additions -- implementations that do not recognise `nominal` or `ordinal` treat them as unknown type values and continue processing the dimension using its other standard properties.
 
-The Hierarchical conformance level is orthogonal to all other conformance levels. A generator that declares `hierarchical: true` exposes `/children`, `/ancestors`, and the `?parent=` filter; it may independently be bijective (declaring `bijective: true` to also expose `/inverse`), searchable, or both. The world-admin demo dimension in the reference implementation illustrates this independence: the static tree generator is hierarchical and searchable but not bijective, because continent and country codes are not deterministically derivable from spatial coordinates without additional metadata. A dimension of ISO 3166-1 alpha-3 country codes with a lookup-table generator would be both hierarchical and bijective if the lookup function is surjective.
+The Hierarchical conformance level is orthogonal to all other conformance levels. A generator that declares `hierarchical: true` exposes `/children`, `/ancestors`, and the `?parent=` filter; it may independently be invertible (declaring `invertible: true` to also expose `/inverse`), searchable, or both. The world-admin demo dimension in the reference implementation illustrates this independence: the static tree generator is hierarchical and searchable but not invertible, because continent and country codes are not deterministically derivable from spatial coordinates without additional metadata. A dimension of ISO 3166-1 alpha-3 country codes with a lookup-table generator would be both hierarchical and invertible if the lookup function is surjective.
 
 ## 4. Implementation and Validation
 
@@ -228,20 +247,22 @@ The Hierarchical conformance level is orthogonal to all other conformance levels
 
 We provide an open-source reference implementation as a Python package (`ogc-dimensions`) with a FastAPI REST API. The source code, JSON Schema specification, and worked examples are available at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license.
 
-A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the GeoID catalog platform (https://github.com/un-fao/geoid). The deployment demonstrates all generator endpoints with full pagination, inverse mapping, and search capabilities. The Swagger UI is accessible at https://data.review.fao.org/geospatial/v2/api/tools/docs, and the `values_href` links in the worked examples point directly to these live endpoints.
+A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the GeoID catalog platform (https://github.com/un-fao/geoid). The deployment demonstrates all generator endpoints with full pagination, inverse mapping, and search capabilities. The Swagger UI is accessible at https://data.review.fao.org/geospatial/v2/api/tools/docs, and the `href` links in the worked examples point directly to these live endpoints.
 
 The implementation includes six generator types:
 
-- **DekadalGenerator**: 36 periods/year, bijective, searchable (exact, range, like)
-- **PentadalMonthlyGenerator**: 72 periods/year (month-aligned variant used by CHIRPS/FAO), bijective, searchable
-- **PentadalAnnualGenerator**: 73 periods/year (year-aligned variant used by GPCP/CPC/NOAA), bijective, searchable
-- **IntegerRangeGenerator**: configurable step, bijective, searchable (exact, range)
-- **StaticTreeGenerator**: in-memory recursive tree; Hierarchical and Searchable conformance; not bijective
+- **DekadalGenerator**: 36 periods/year, invertible, searchable (exact, range, like)
+- **PentadalMonthlyGenerator**: 72 periods/year (month-aligned variant used by CHIRPS/FAO), invertible, searchable
+- **PentadalAnnualGenerator**: 73 periods/year (year-aligned variant used by GPCP/CPC/NOAA), invertible, searchable
+- **IntegerRangeGenerator**: configurable step, invertible, searchable (exact, range)
+- **StaticTreeGenerator**: in-memory recursive tree; Hierarchical and Searchable conformance; not invertible
 - **LeveledTreeGenerator**: extends `StaticTreeGenerator` with a `?level=` filter parameter, supporting condition-based level queries (`?level=0` for root members, `?level=1&parent=X` for children at a specific level)
 
 The temporal and integer-range generators implement the Basic, Invertible, and Searchable conformance levels. The `StaticTreeGenerator` implements the Basic, Searchable, and Hierarchical conformance levels. The `LeveledTreeGenerator` extends these with level-based filtering, demonstrating the leveled hierarchy strategy: clients may query by level (obtaining all members at a given depth) or by parent (navigating the tree), or combine both.
 
 The live deployment at https://data.review.fao.org/geospatial/v2/api/tools/docs exposes twelve named dimensions through the geoid DimensionsExtension. Five originate from the ogc-dimensions package defaults (`dekadal`, `pentadal-monthly`, `pentadal-annual`, `integer-range`, `world-admin`). Seven additional dimensions are registered by the DimensionsExtension at startup to illustrate the full capability surface: `temporal-dekadal`, `temporal-pentadal-monthly`, `temporal-pentadal-annual`, `indicator-tree`, `admin-boundaries`, `forestry-species`, and `elevation-bands`. These dimensions are described in detail in Section 5.
+
+The hierarchical demo dimensions use small datasets (30–67 nodes) designed to demonstrate the API contract and endpoint semantics. Production-scale validation against full hierarchies — GAUL L0–L2 (49,695 administrative units), FAOSTAT (10,000+ indicators) — is planned through the GeoID integration, where the DimensionsExtension can back the same API contract with database-driven generators rather than in-memory trees. The temporal generators, by contrast, are algorithmically unbounded: the 100-year extents in the demo (3,636–7,373 members) exercise pagination at realistic scale.
 
 ### 4.2 Validation Results
 
@@ -262,9 +283,19 @@ The pentadal generators are validated against CHIRPS (monthly variant) and GPCP 
 
 ### 4.3 Performance Characteristics
 
-Paginated generation enables constant-memory serving of arbitrarily large dimensions. A dekadal dimension spanning 100 years (3,600 members) is served in 36 pages of 100 members each, with each page generated in constant time through the deterministic algorithm. No database query or pre-materialized array is required.
+Table 2 reports latency measurements from the reference implementation running locally (Python 3.12, FastAPI/Uvicorn, Apple M2, single worker). All measurements are averages over 10 HTTP requests or 10,000 function calls.
 
-Batch inverse operations process lists of values in a single HTTP request, enabling efficient ETL pipeline integration. The inverse computation for temporal generators is O(1) per value (direct arithmetic from date components), making batch processing of millions of records practical.
+| Operation | Extent | Latency |
+|---|---|---|
+| `/generate` (dekadal, 100-year, page=100) | 3,636 members | < 1 ms HTTP |
+| `/generate` (dekadal, page at offset 1800) | mid-range page | < 1 ms HTTP |
+| `/inverse` (single value) | — | 1.9 us/call |
+| `/inverse` batch (1,200 values) | — | 3.2 ms |
+| `/children` (tree, 13 children) | 54 nodes | < 1 ms HTTP |
+
+Inverse computation is O(1) per value for temporal generators (direct arithmetic from date components). Batch inverse processes 1,200 values in 3.2 ms, making ingestion validation of millions of records practical within ETL pipeline latency budgets.
+
+The current reference implementation materializes the full member list before slicing to the requested page. This is adequate for the intended demonstration scale (hundreds to low thousands of members) but would benefit from lazy iteration for production deployments spanning millions of members. Database-backed generator implementations — such as the GeoID DimensionsExtension, which delegates to PostgreSQL or Elasticsearch — avoid this limitation entirely by pushing pagination to the query layer.
 
 ## 5. Use Cases
 
@@ -284,9 +315,9 @@ The critical interoperability problem is that pentad code `P12` in the month-ali
 - `temporal-pentadal-monthly` — `PentadalMonthlyGenerator`, 72 periods/year, month-aligned (7,272 members)
 - `temporal-pentadal-annual` — `PentadalAnnualGenerator`, 73 periods/year, year-aligned (7,373 members)
 
-Each dimension's `generator.type` is a distinct identifier (`dekadal`, `pentadal-monthly`, `pentadal-annual`), enabling clients to detect calendar system mismatches before joining data. The bijective inverse makes the incompatibility explicit and machine-checkable: `GET /dimensions/temporal-pentadal-monthly/inverse?value=1950-P12` and `GET /dimensions/temporal-pentadal-annual/inverse?value=1950-A12` return different date ranges, demonstrating that the same numeric position maps to different calendar intervals in the two systems.
+Each dimension's `generator.type` is a distinct identifier (`dekadal`, `pentadal-monthly`, `pentadal-annual`), enabling clients to detect calendar system mismatches before joining data. The invertible generator's `/inverse` endpoint makes the incompatibility explicit and machine-checkable: `GET /dimensions/temporal-pentadal-monthly/inverse?value=1950-P12` and `GET /dimensions/temporal-pentadal-annual/inverse?value=1950-A12` return different date ranges, demonstrating that the same numeric position maps to different calendar intervals in the two systems.
 
-The 100-year extents are intentional: they produce member counts (3,636 to 7,373) that are impractical to embed in a collection JSON document, directly motivating the `size` + `values_href` pagination mechanism. With `limit=10`, a client retrieves only the first ten periods of any dimension and follows `rel:next` links to advance through the archive. The `numberMatched` field communicates total cardinality in the first response, enabling progress indicators and pre-allocation.
+The 100-year extents are intentional: they produce member counts (3,636 to 7,373) that are impractical to embed in a collection JSON document, directly motivating the `size` + `href` pagination mechanism. With `limit=10`, a client retrieves only the first ten periods of any dimension and follows `rel:next` links to advance through the archive. The `numberMatched` field communicates total cardinality in the first response, enabling progress indicators and pre-allocation.
 
 ```
 GET /dimensions/temporal-dekadal/generate?limit=10
@@ -413,7 +444,7 @@ The batch inverse endpoint (POST) is designed for ETL pipeline integration: a pr
 
 ### 5.6 Cross-Collection Temporal Alignment
 
-Multiple collections sharing the same temporal cadence — NDVI composites, precipitation estimates, and soil moisture indicators, all at dekadal frequency — must use identical temporal coordinates to be jointly queryable. Without a shared generator definition, independent systems compute period boundaries separately and may introduce off-by-one errors at month boundaries (particularly for the third dekad, which varies between 8 and 11 days depending on the month). By referencing the same `generator.type: "dekadal"` with the same endpoint, all collections in the same platform are guaranteed to use coordinates produced by the same algorithm. The bijective inverse makes this guarantee enforceable at ingestion time: when a new item is inserted into any collection in the system, its temporal value is submitted to `/inverse`, and a mismatch with the expected dekadal boundary produces a hard rejection rather than a silent data quality issue.
+Multiple collections sharing the same temporal cadence — NDVI composites, precipitation estimates, and soil moisture indicators, all at dekadal frequency — must use identical temporal coordinates to be jointly queryable. Without a shared generator definition, independent systems compute period boundaries separately and may introduce off-by-one errors at month boundaries (particularly for the third dekad, which varies between 8 and 11 days depending on the month). By referencing the same `generator.type: "dekadal"` with the same endpoint, all collections in the same platform are guaranteed to use coordinates produced by the same algorithm. The `/inverse` endpoint makes this guarantee enforceable at ingestion time: when a new item is inserted into any collection in the system, its temporal value is submitted to `/inverse`, and a mismatch with the expected dekadal boundary produces a hard rejection rather than a silent data quality issue.
 
 The three temporal dimensions deployed on the reference endpoint (`temporal-dekadal`, `temporal-pentadal-monthly`, `temporal-pentadal-annual`) can also be used to demonstrate cross-system misalignment: a test harness can submit the same date to all three `/inverse` endpoints and observe that each returns a different `member` code, making the incompatibility explicit, machine-detectable, and auditable.
 
@@ -423,7 +454,7 @@ We propose a phased approach to standardization:
 
 1. **Community publication**: This paper and the companion GitHub repository (specification, reference implementation, worked examples) serve as the initial community contribution.
 
-2. **STAC Community Extension**: Submit JSON Schema changes (`size`, `values_href`, `generator`) to `stac-extensions/datacube`, referencing Testbed 19/20 findings.
+2. **STAC Community Extension**: Submit JSON Schema changes (`size`, `href`, `generator`) to `stac-extensions/datacube`, referencing Testbed 19/20 findings.
 
 3. **OGC GeoDataCube SWG**: Submit as a Change Request Proposal to the GeoDataCube specification, proposing `generator` as a new conformance class.
 
@@ -431,13 +462,15 @@ We propose a phased approach to standardization:
 
 5. **OGC Innovation Program**: Propose "Scalable Dimension Members" as a thread topic for a future OGC Testbed, with the reference implementation as a testbed component.
 
+A natural objection is that extending STAC's datacube schema is "too opinionated" -- that dimension pagination and generation should be addressed at a higher abstraction level, such as a standalone OGC Building Block or a separate API profile. We argue that the STAC Datacube Extension is the correct integration point for three reasons. First, the GeoDataCube SWG charter explicitly adopts STAC `cube:dimensions` as its metadata model; any solution not expressed in that schema requires consumers to reconcile two independent dimension metadata sources. Second, the properties we add (`size`, `href`, `generator`, `hierarchy`) are strictly optional and backwards-compatible: existing clients and validators ignore unknown properties per JSON processing rules, so the extension imposes zero cost on implementations that do not need it. Third, the STAC community extension ecosystem already provides a proven governance model for domain-specific additions (e.g., `eo`, `sar`, `pointcloud`), with clear promotion paths from community extension to official extension. A standalone profile would require separate discovery, separate tooling, and separate governance -- precisely the fragmentation that the GDC SWG was created to reduce.
+
 ## 7. Discussion
 
-The generator pattern addresses a genuine gap confirmed by OGC's own testbed program. The approach is deliberately minimal: three new properties on an existing schema, each optional and backwards-compatible. Existing clients and servers are unaffected. Adoption can be incremental -- a server might initially support only `size` and `values_href` (pagination without generation), then add generators for specific dimension types as needed.
+The generator pattern addresses a genuine gap confirmed by OGC's own testbed program. The approach is deliberately minimal: three new properties on an existing schema, each optional and backwards-compatible. Existing clients and servers are unaffected. Adoption can be incremental -- a server might initially support only `size` and `href` (pagination without generation), then add generators for specific dimension types as needed.
 
 The decision to use JSON Schema 2020-12 for both `parameters` and `output` fields avoids introducing a new type system. OpenAPI specifications already use JSON Schema internally, creating a natural alignment between the generator metadata in collection descriptions and the actual API contracts of generator endpoints.
 
-The conformance level hierarchy provides a clear adoption path. Most implementations will need only Basic (pagination) and Invertible (validation). Searchable adds significant value for large non-temporal dimensions. Similarity and Intelligent levels document architectural possibilities without imposing requirements, allowing the specification to evolve as AI/ML integration with geospatial standards matures.
+The conformance level hierarchy provides a clear adoption path. Most implementations will need only Basic (pagination) and Invertible (validation). Searchable adds significant value for large non-temporal dimensions. The Similarity level documents an architectural possibility without imposing requirements, allowing the specification to evolve as AI/ML integration with geospatial standards matures.
 
 The reference implementation has been deployed on the FAO Agro-Informatics Platform review environment, where it serves as a Dynastore extension alongside production STAC catalog services. This deployment validates the integration model: the generator API operates behind a reverse proxy with path prefixes, demonstrating that the HATEOAS link generation and pagination mechanics work correctly in a real infrastructure environment with TLS termination and path-based routing.
 
@@ -447,7 +480,7 @@ The hierarchical dimension extension opens a pathway toward formal alignment wit
 
 ## 8. Conclusion
 
-We have presented a backwards-compatible extension to the STAC Datacube dimension model that addresses three fundamental gaps in current geospatial metadata standards. The first is scalable pagination of dimension members via `size` and `values_href`, resolving the practical impossibility of embedding thousands of dimension values in collection metadata. The second is algorithmic generation of deterministic dimensions via the `generator` object, enabling both server-side API access and client-side computation from machine-discoverable OpenAPI definitions. The third is formal invertibility for dimension integrity enforcement: invertible generators define a total surjective function from any domain value to exactly one dimension member, enabling ingestion validation, cross-collection consistency, and ETL quality monitoring through the `/inverse` endpoint. The use of the term `bijective` in the generator field is acknowledged to differ from its strict mathematical meaning — the intended semantics are those of a partition function or quantization, not a one-to-one correspondence — and the paper uses "invertible" where mathematical precision is required.
+We have presented a backwards-compatible extension to the STAC Datacube dimension model that addresses three fundamental gaps in current geospatial metadata standards. The first is scalable pagination of dimension members via `size` and `href`, resolving the practical impossibility of embedding thousands of dimension values in collection metadata. The second is algorithmic generation of deterministic dimensions via the `generator` object, enabling both server-side API access and client-side computation from machine-discoverable OpenAPI definitions. The third is formal invertibility for dimension integrity enforcement: invertible generators define a total surjective function from any domain value to exactly one dimension member, enabling ingestion validation, cross-collection consistency, and ETL quality monitoring through the `/inverse` endpoint.
 
 Beyond the core three properties, we have introduced two additional contributions. The `hierarchy` property with recursive and leveled strategies extends the model to tree-structured nominal and ordinal dimensions, providing a standard REST interface for progressive tree navigation that is aligned with the STAC API Children Extension and directly applicable to administrative boundary datasets, statistical indicator catalogs, and species classification systems. Two new dimension types, `nominal` and `ordinal`, improve expressiveness beyond the existing `other` fallback.
 
@@ -512,5 +545,3 @@ The approach is validated through a reference implementation of six generator ty
 28. FAO. Global Administrative Unit Layers (GAUL). https://www.fao.org/geonetwork/srv/en/metadata.show?id=12691
 
 29. FAO. AGROVOC Multilingual Thesaurus. https://www.fao.org/agrovoc/
-
-28. Food and Agriculture Organization of the United Nations. AGROVOC Multilingual Thesaurus. https://agrovoc.fao.org/

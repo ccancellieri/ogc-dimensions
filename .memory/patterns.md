@@ -2,7 +2,7 @@
 
 ## Generator Protocol Pattern
 All generators inherit from `DimensionGenerator` ABC in `testbed/generators/base.py`.
-Required: `generate()`, `extent()`, `generator_type`, `bijective`.
+Required: `generate()`, `extent()`, `generator_type`, `invertible`.
 Optional: `inverse()`, `search()`, `inverse_batch()`.
 Capabilities and search_protocols are derived properties.
 

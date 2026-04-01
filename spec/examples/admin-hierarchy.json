@@ -38,6 +38,7 @@
       "description": "Administrative boundary dimension. Three-level hierarchy: Country (L0), ADM1 sub-national unit (L1), ADM2 district (L2). Leveled strategy: hierarchy is defined by level rules, not by parent fields stored on members. Clients navigate via /children endpoint.",
       "hierarchy": {
         "strategy": "leveled",
+        "_strategy_note": "informational — the generator type 'leveled-tree' is the authoritative source of hierarchy behaviour",
         "levels": [
           {
             "id": "L0",
@@ -45,7 +46,7 @@
             "size": 195,
             "member_id_property": "iso_code",
             "parameters": {"level": 0},
-            "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=0&limit=5"
+            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=0&limit=5"
           },
           {
             "id": "L1",
@@ -55,7 +56,7 @@
             "member_id_property": "adm1_code",
             "parent_id_property": "iso_code",
             "parameters": {"level": 1},
-            "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=1&limit=5"
+            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=1&limit=5"
           },
           {
             "id": "L2",
@@ -65,12 +66,12 @@
             "member_id_property": "adm2_code",
             "parent_id_property": "adm1_code",
             "parameters": {"level": 2},
-            "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=2&limit=5"
+            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=2&limit=5"
           }
         ]
       },
       "generator": {
-        "type": "static-tree",
+        "type": "leveled-tree",
         "parameters": {
           "type": "object",
           "properties": {
@@ -95,17 +96,17 @@
           },
           "required": ["code", "label", "level"]
         },
-        "bijective": false,
+        "invertible": false,
         "search": ["exact", "like"],
         "hierarchical": true
       },
-      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=0&limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/generate?level=0&limit=5"
     }
   },
-  "_values_href_response_page1": {
+  "_href_response_page1": {
     "_description": "Example response from GET /generate?level=0&limit=5 — root (country) level members",
     "dimension": "world-admin",
-    "generator": "static-tree",
+    "generator": "leveled-tree",
     "numberMatched": 195,
     "numberReturned": 5,
     "values": [

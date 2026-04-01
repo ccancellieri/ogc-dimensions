@@ -20,7 +20,7 @@ app = FastAPI(
     description=(
         "Reference implementation for the OGC Dimensions specification: "
         "paginated dimension members, algorithmic generators, "
-        "bijective inversion, search capabilities, and hierarchical dimensions "
+        "invertible generators, search capabilities, and hierarchical dimensions "
         "(/children, /ancestors) aligned with the STAC API Children Extension."
     ),
     version="0.2.0",

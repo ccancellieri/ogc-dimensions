@@ -23,6 +23,7 @@ from ..generators import (
     DekadalGenerator,
     DimensionGenerator,
     IntegerRangeGenerator,
+    LeveledTreeGenerator,
     PentadalAnnualGenerator,
     PentadalMonthlyGenerator,
     StaticTreeGenerator,
@@ -87,7 +88,7 @@ DIMENSIONS: dict[str, DimensionConfig] = {
         extent_max="5000",
     ),
     "world-admin": DimensionConfig(
-        generator=StaticTreeGenerator(),
+        generator=LeveledTreeGenerator(),
         description=(
             "Hierarchical administrative boundaries: 5 continents → 49 countries. "
             "Demonstrates the Hierarchical conformance level (/children, /ancestors)."
@@ -109,16 +110,39 @@ def _get_dimension(dimension_id: str) -> DimensionConfig:
     return dim
 
 
-def _member_to_dict(m) -> dict[str, Any]:
+def _member_to_dict(
+    m,
+    *,
+    gen: DimensionGenerator | None = None,
+    dim_base_url: str | None = None,
+) -> dict[str, Any]:
     if m.extra:
-        return m.extra
-    d: dict[str, Any] = {"value": m.value, "index": m.index}
-    if m.code is not None:
-        d["code"] = m.code
-    if m.start is not None:
-        d["start"] = m.start
-    if m.end is not None:
-        d["end"] = m.end
+        d = dict(m.extra)
+    else:
+        d: dict[str, Any] = {"value": m.value, "index": m.index}
+        if m.code is not None:
+            d["code"] = m.code
+        if m.start is not None:
+            d["start"] = m.start
+        if m.end is not None:
+            d["end"] = m.end
+
+    # Member-level navigation links (opt-in via ?links=true)
+    if gen is not None and dim_base_url is not None and m.code is not None:
+        member_links: list[dict[str, str]] = []
+        if gen.has_children(m.code):
+            member_links.append({
+                "rel": "children",
+                "href": f"{dim_base_url}/children?parent={m.code}",
+                "type": "application/json",
+            })
+        member_links.append({
+            "rel": "ancestors",
+            "href": f"{dim_base_url}/ancestors?member={m.code}",
+            "type": "application/json",
+        })
+        d["links"] = member_links
+
     return d
 
 
@@ -133,7 +157,7 @@ async def list_dimensions(request: Request):
                 "description": cfg.description,
                 "generator": {
                     "type": cfg.generator.generator_type,
-                    "bijective": cfg.generator.bijective,
+                    "invertible": cfg.generator.invertible,
                     "capabilities": [c.value for c in cfg.generator.capabilities],
                     "search_protocols": [s.value for s in cfg.generator.search_protocols],
                 },
@@ -166,6 +190,7 @@ async def generate(
     format: str = Query("structured", description="Output format: structured, datetime, native"),
     parent: str | None = Query(None, description="Filter to direct children of this member code (Hierarchical conformance)"),
     level: int | None = Query(None, description="Hierarchy level filter — return only members at this level (leveled strategy)"),
+    links: bool = Query(False, description="Include per-member navigation links (children, ancestors). Only effective for hierarchical dimensions."),
 ):
     """Generate paginated dimension members within extent.
 
@@ -181,13 +206,18 @@ async def generate(
 
     result = gen.generate(ext_min, ext_max, limit=limit, offset=offset, parent=parent, level=level)
 
+    # Build member-level link context only when opt-in and hierarchical
+    emit_member_links = links and gen.hierarchical
+    link_gen = gen if emit_member_links else None
+    link_base = _parent_url(request) if emit_member_links else None  # .../dimensions/{id}
+
     values: list[Any]
     if format == "datetime":
         values = [m.value for m in result.members]
     elif format == "native":
         values = [m.code for m in result.members]
     else:
-        values = [_member_to_dict(m) for m in result.members]
+        values = [_member_to_dict(m, gen=link_gen, dim_base_url=link_base) for m in result.members]
 
     self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/generate
     _extra_qs = ""
@@ -258,11 +288,11 @@ async def inverse(
     """Map a value to its dimension member (single value)."""
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
-    if not gen.bijective:
+    if not gen.invertible:
         raise HTTPException(
             status_code=501,
             detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
-            f"is not bijective and does not support inverse.",
+            f"is not invertible and does not support inverse.",
         )
 
     result = gen.inverse(value)
@@ -294,11 +324,11 @@ async def inverse_batch(
     """Batch inverse for pipeline operations."""
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
-    if not gen.bijective:
+    if not gen.invertible:
         raise HTTPException(
             status_code=501,
             detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
-            f"is not bijective.",
+            f"is not invertible.",
         )
 
     results = gen.inverse_batch(request.values, on_invalid=request.on_invalid)
@@ -382,6 +412,7 @@ async def children(
     parent: str = Query(..., description="Return direct children of this member code"),
     limit: int = Query(100, ge=1, le=10000, description="Max items per page"),
     offset: int = Query(0, ge=0, description="Items to skip"),
+    links: bool = Query(False, description="Include per-member navigation links (children, ancestors)."),
 ):
     """Return paginated direct children of a hierarchy node.
 
@@ -403,19 +434,23 @@ async def children(
     self_url = _self_url(request)
     dim_base = _parent_url(request)
 
-    links = [
+    # Member-level link context (opt-in)
+    link_gen = gen if links else None
+    link_base = dim_base if links else None
+
+    resp_links = [
         {"rel": "self", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset}", "type": "application/json"},
     ]
     if offset + limit < result.number_matched:
-        links.append(
+        resp_links.append(
             {"rel": "next", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset + limit}", "type": "application/json"}
         )
     if offset > 0:
         prev_offset = max(0, offset - limit)
-        links.append(
+        resp_links.append(
             {"rel": "prev", "href": f"{self_url}?parent={parent}&limit={limit}&offset={prev_offset}", "type": "application/json"}
         )
-    links.append(
+    resp_links.append(
         {"rel": "parent", "href": f"{dim_base}/generate?code={parent}", "type": "application/json"}
     )
 
@@ -425,8 +460,8 @@ async def children(
         "parent": parent,
         "numberMatched": result.number_matched,
         "numberReturned": result.number_returned,
-        "values": [_member_to_dict(m) for m in result.members],
-        "links": links,
+        "values": [_member_to_dict(m, gen=link_gen, dim_base_url=link_base) for m in result.members],
+        "links": resp_links,
     }
 
 

@@ -1,13 +1,24 @@
-"""Static tree generator for hierarchical dimensions.
+"""Static tree generators for hierarchical dimensions.
 
-Implements the Hierarchical conformance level using an in-memory tree:
-  /generate              -- root members (parent_code is null)
-  /generate?parent=X     -- direct children of X (alias for /children)
-  /children?parent=X     -- direct children of X
-  /ancestors?member=X    -- ancestor chain from root to X (inclusive)
+Two generator types are provided, each encapsulating its own hierarchy strategy:
 
-The bundled ``WORLD_ADMIN_NODES`` dataset provides a two-level
-continent → country tree suitable for the ``world-admin`` demo dimension.
+  StaticTreeGenerator  (type: "static-tree")
+    Recursive strategy: each member carries a ``parent_code`` field.
+    /generate          → root members (parent_code is None)
+    /generate?parent=X → delegates to /children (alias)
+    /children?parent=X → direct children of X
+    /ancestors?member=X → ancestor chain from root to X
+
+  LeveledTreeGenerator  (type: "leveled-tree")
+    Leveled strategy: hierarchy is imposed by named level definitions.
+    Extends StaticTreeGenerator with a ``?level=N`` parameter that filters
+    members to a specific level, mirroring the ``parameters`` object declared
+    in each hierarchy level's metadata.
+    /generate?level=N         → all members at level N
+    /generate?level=N&parent=X → members at level N that are children of X
+
+Adding a new hierarchy strategy means adding a new generator subclass —
+no changes to the spec schema are required.
 """
 
 from __future__ import annotations
@@ -105,13 +116,34 @@ def _to_member(node: dict[str, Any], index: int) -> GeneratedMember:
     )
 
 
+def _paginate_nodes(
+    candidates: list[dict[str, Any]],
+    offset: int,
+    limit: int,
+) -> PaginatedResult:
+    """Shared pagination helper for all tree generators."""
+    total = len(candidates)
+    page = candidates[offset: offset + limit]
+    members = [_to_member(node, offset + i) for i, node in enumerate(page)]
+    return PaginatedResult(
+        dimension="",
+        number_matched=total,
+        number_returned=len(members),
+        members=members,
+        offset=offset,
+        limit=limit,
+    )
+
+
 class StaticTreeGenerator(DimensionGenerator):
-    """In-memory static tree generator for hierarchical nominal dimensions.
+    """In-memory recursive tree generator for hierarchical nominal dimensions.
+
+    Strategy: recursive — each member carries a ``parent_code`` field.
+    The generator itself owns the hierarchy logic: adding a new strategy
+    means adding a new generator subclass, not changing the spec schema.
 
     Supports Hierarchical conformance level: ``/children``, ``/ancestors``,
-    and ``?parent=`` filter on ``/generate``. Designed for the ``world-admin``
-    demo dimension but accepts any list of nodes with ``code``, ``label``,
-    and ``parent_code`` fields.
+    and ``?parent=`` filter on ``/generate``.
     """
 
     def __init__(self, nodes: list[dict[str, Any]] | None = None) -> None:
@@ -127,7 +159,7 @@ class StaticTreeGenerator(DimensionGenerator):
         return "static-tree"
 
     @property
-    def bijective(self) -> bool:
+    def invertible(self) -> bool:
         return False
 
     @property
@@ -146,25 +178,12 @@ class StaticTreeGenerator(DimensionGenerator):
         offset: int = 0,
         **params: Any,
     ) -> PaginatedResult:
-        """Return root members, or children of ``parent`` if given."""
+        """Return root members, or delegate to children() when parent is given."""
         parent: str | None = params.get("parent")
         if parent is not None:
-            candidates = [n for n in self._nodes if n["parent_code"] == parent]
-        else:
-            candidates = [n for n in self._nodes if n["parent_code"] is None]
-
-        total = len(candidates)
-        page = candidates[offset: offset + limit]
-        members = [_to_member(node, offset + i) for i, node in enumerate(page)]
-
-        return PaginatedResult(
-            dimension="",
-            number_matched=total,
-            number_returned=len(members),
-            members=members,
-            offset=offset,
-            limit=limit,
-        )
+            return self.children(parent, limit=limit, offset=offset)
+        candidates = [n for n in self._nodes if n["parent_code"] is None]
+        return _paginate_nodes(candidates, offset, limit)
 
     def extent(self, extent_min: Any, extent_max: Any, **params: Any) -> ExtentResult:
         """Return total node count as size; no numeric extent applies."""
@@ -188,23 +207,12 @@ class StaticTreeGenerator(DimensionGenerator):
     ) -> PaginatedResult:
         """Return paginated direct children of *parent_code*."""
         candidates = [n for n in self._nodes if n["parent_code"] == parent_code]
-        total = len(candidates)
-        page = candidates[offset: offset + limit]
-        members = [_to_member(node, offset + i) for i, node in enumerate(page)]
-
-        return PaginatedResult(
-            dimension="",
-            number_matched=total,
-            number_returned=len(members),
-            members=members,
-            offset=offset,
-            limit=limit,
-        )
+        return _paginate_nodes(candidates, offset, limit)
 
     def ancestors(self, member_code: str) -> list[dict[str, Any]]:
         """Return ancestor chain from root to *member_code* (inclusive).
 
-        The chain is ordered from coarsest ancestor to the member itself.
+        Ordered from coarsest ancestor to the member itself.
         Returns an empty list if *member_code* is not found.
         """
         chain: list[dict[str, Any]] = []
@@ -222,6 +230,10 @@ class StaticTreeGenerator(DimensionGenerator):
             code = node.get("parent_code")
 
         return chain
+
+    def has_children(self, member_code: str) -> bool:
+        """Return True if any node lists *member_code* as its parent."""
+        return any(n["parent_code"] == member_code for n in self._nodes)
 
     # ------------------------------------------------------------------
     # Searchable conformance
@@ -268,16 +280,22 @@ class StaticTreeGenerator(DimensionGenerator):
 
 
 class LeveledTreeGenerator(StaticTreeGenerator):
-    """Tree generator supporting level-based filtering (leveled strategy).
+    """In-memory leveled tree generator for hierarchical nominal dimensions.
 
-    Extends ``StaticTreeGenerator`` with a ``level`` parameter on ``/generate``.
-    Nodes must carry a ``level`` integer field.  Clients can filter by level
-    (condition-based), by parent (tree navigation), or both::
+    Strategy: leveled — hierarchy is imposed by named level definitions;
+    the tree structure is NOT encoded in member data alone. The ``?level=N``
+    parameter filters members to a specific level, mirroring the
+    ``parameters`` object declared in each hierarchy level's metadata.
 
-        ?level=0             → all continents
+    Supports all StaticTreeGenerator operations plus level-based filtering::
+
+        ?level=0             → all continents (root level)
         ?level=1             → all countries
         ?level=1&parent=AFR  → African countries only
-        ?parent=ITA          → Italian regions (children of ITA)
+        ?parent=ITA          → Italian regions (recursive children of ITA)
+
+    Adding a new strategy (e.g., composite) means adding another subclass here.
+    No spec schema changes are required.
     """
 
     @property
@@ -293,21 +311,12 @@ class LeveledTreeGenerator(StaticTreeGenerator):
         **params: Any,
     ) -> PaginatedResult:
         level = params.get("level")
-        if level is not None:
-            level_int = int(level)
-            parent: str | None = params.get("parent")
-            candidates = [n for n in self._nodes if n.get("level") == level_int]
-            if parent is not None:
-                candidates = [n for n in candidates if n["parent_code"] == parent]
-            total = len(candidates)
-            page = candidates[offset: offset + limit]
-            members = [_to_member(node, offset + i) for i, node in enumerate(page)]
-            return PaginatedResult(
-                dimension="",
-                number_matched=total,
-                number_returned=len(members),
-                members=members,
-                offset=offset,
-                limit=limit,
-            )
-        return super().generate(extent_min, extent_max, limit, offset, **params)
+        if level is None:
+            return super().generate(extent_min, extent_max, limit, offset, **params)
+
+        level_int = int(level)
+        candidates = [n for n in self._nodes if n.get("level") == level_int]
+        parent: str | None = params.get("parent")
+        if parent is not None:
+            candidates = [n for n in candidates if n["parent_code"] == parent]
+        return _paginate_nodes(candidates, offset, limit)

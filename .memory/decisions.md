@@ -66,6 +66,25 @@ Context: Generator type was the path key, but dimensions are the user-facing con
 Decision: Routes now use `/dimensions/{dimension_id}/...`. A `DimensionConfig` maps each named dimension to a generator instance + default extent.
 Rationale: Multiple dimensions can share the same generator type with different configs (e.g., `chirps-time` and `ndvi-time` both using dekadal). Dimensions are the addressable resource; generators are the implementation.
 
+## 2026-04-01 Hierarchy strategy absorbed into generator type
+Context: hierarchy.json had a oneOf discriminator on `strategy` (leveled/recursive). This was redundant with generator.type.
+Decision: Remove oneOf/strategy discriminator from hierarchy.json. strategy becomes optional informational annotation. Generator type IS the strategy — `static-tree` = recursive, `leveled-tree` = leveled. Adding a new strategy = adding a new generator type, no schema changes.
+Rationale: Reduces spec complexity; aligns with ADR "Generator as Generalized Object." New strategies (e.g. composite-tree) are just new generator types.
+
+## 2026-04-01 Renamed bijective → invertible
+Context: The field `bijective: true` was misleading — the forward function is a total surjection (partition), not a bijection. The conformance level was already called "Invertible."
+Decision: Rename field to `invertible` across spec, implementation, paper, and all drafts. Remove the 200-word terminological apologia from paper Section 3.3 and conclusion.
+Rationale: Field name now matches conformance level name. No need to explain away a misnomer.
+
+## 2026-04-01 generator.type is an open extensible string, not a closed enum
+Context: generator.json had a closed enum of well-known types. This prevented custom short identifiers without URI format.
+Decision: type is now just `string`. Well-known types are documented in the description. Custom generators use a full URI. The `if/then` guard for requiring `api` triggers on URI-formatted types.
+Rationale: The list of well-known types should grow without schema changes (e.g., new calendar systems from different agencies).
+
+## 2026-04-01 Removed "Intelligent" conformance level ghost
+Context: "Intelligent" was removed from the conformance table but still referenced in the Discussion section.
+Decision: Cleaned up. Five conformance levels: Basic, Invertible, Searchable, Hierarchical, Similarity.
+
 ## 2026-03-28 Dynastore integration as isolated extension
 Context: Need to showcase on a live FAO system without coupling to STAC.
 Decision: Thin `DimensionsExtension` (ExtensionProtocol) in geoid wraps the ogc-dimensions pip package. Deployed on `geospatial-tools` Cloud Run service (SCOPE: core,template,dimensions). No STAC interaction.

@@ -22,13 +22,13 @@
           "minimum": 0,
           "maximum": 5000
         },
-        "bijective": true,
+        "invertible": true,
         "search": ["exact", "range"],
         "on_invalid": "reject"
       },
       "unit": "m",
       "size": 51,
-      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/generate?limit=5"
     },
     "x": {
       "type": "spatial",

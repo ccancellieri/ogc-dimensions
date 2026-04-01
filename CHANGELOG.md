@@ -5,8 +5,8 @@
 Initial release.
 
 ### Specification
-- JSON Schema for extended dimension object (`size`, `values_href`, `generator`)
-- JSON Schema for generator object (`type`, `api`, `parameters`, `output`, `bijective`, `search`, `on_invalid`)
+- JSON Schema for extended dimension object (`size`, `href`, `generator`)
+- JSON Schema for generator object (`type`, `api`, `parameters`, `output`, `invertible`, `search`, `on_invalid`)
 - Worked examples: dekadal, pentadal (monthly + annual), integer-range, legacy bridge
 
 ### Testbed

@@ -20,7 +20,7 @@ This Change Request Proposal introduces five backwards-compatible extensions to 
 
 The proposal adds:
 1. **`size`** -- dimension member count (integer, RECOMMENDED)
-2. **`values_href`** -- link to paginated member endpoint (URI, OPTIONAL)
+2. **`href`** -- link to paginated member endpoint (URI, OPTIONAL)
 3. **`generator`** -- algorithmic member generation with OpenAPI discovery (object, OPTIONAL)
 4. **`hierarchy`** -- tree structure for hierarchical dimensions (object, OPTIONAL); two strategies: recursive (parent reference in member data) and leveled (hierarchy imposed by named level definitions)
 5. **`nominal` / `ordinal`** -- two new dimension type values for coded dimensions, more precise than the existing `other` fallback
@@ -59,7 +59,7 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 | Level | Capabilities | Requirement |
 |---|---|---|
 | Basic | /generate + /extent | MUST support |
-| Invertible | + /inverse | Bijective generators only |
+| Invertible | + /inverse | Invertible generators only |
 | Searchable | + /search (exact, range, like) | SHOULD support |
 | Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
 | Similarity | + /search (vector) | MAY support (future) |
@@ -72,7 +72,7 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
   "api": "http://www.opengis.net/def/generator/ogc/0/dekadal/openapi.json",
   "parameters": {},
   "output": {"type": "object", "properties": {...}},
-  "bijective": true,
+  "invertible": true,
   "search": ["exact", "range", "like"],
   "on_invalid": "reject"
 }
@@ -85,7 +85,7 @@ Well-known generator types (`dekadal`, `pentadal-monthly`, `pentadal-annual`, `i
 The TB-20 pivot from standalone GDC standard to profile/integration approach directly supports this proposal:
 - The generator properties are **additive extensions** to the existing STAC `cube:dimensions` model
 - No existing properties are modified or removed
-- Servers can adopt incrementally (size-only, then values_href, then generators)
+- Servers can adopt incrementally (size-only, then href, then generators)
 - Legacy clients are unaffected (unknown properties are ignored per JSON processing rules)
 
 ## Supporting materials

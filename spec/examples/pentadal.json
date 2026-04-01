@@ -20,14 +20,14 @@
             },
             "required": ["code", "start", "end"]
           },
-          "bijective": true,
+          "invertible": true,
           "search": ["exact", "range", "like"],
           "on_invalid": "reject"
         },
-        "step": "1P",
+        "step": null,
         "unit": "pentad",
         "size": 1800,
-        "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=5"
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=5"
       }
     }
   },
@@ -51,13 +51,13 @@
             },
             "required": ["code", "start", "end"]
           },
-          "bijective": true,
+          "invertible": true,
           "search": ["exact", "range", "like"]
         },
-        "step": "1P",
+        "step": null,
         "unit": "pentad",
         "size": 1825,
-        "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/generate?limit=5"
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/generate?limit=5"
       }
     }
   }
