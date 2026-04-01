@@ -12,7 +12,7 @@ Scalable Dimension Member Dissemination and Algorithmic Generation for GeoDataCu
 
 ## Submitter
 
-Carlo Cancellieri, Food and Agriculture Organization of the United Nations (FAO), OGC Member
+Carlo Cancellieri, Food and Agriculture Organization of the United Nations (FAO)
 
 ## Summary
 
