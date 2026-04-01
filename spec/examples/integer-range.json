@@ -7,15 +7,23 @@
     "elevation": {
       "type": "other",
       "description": "Elevation bands (meters above sea level)",
-      "extent": [0, 5000],
+      "extent": [
+        0,
+        5000
+      ],
       "generator": {
         "type": "integer-range",
         "parameters": {
           "type": "object",
           "properties": {
-            "step": {"type": "integer", "const": 100}
+            "step": {
+              "type": "integer",
+              "const": 100
+            }
           },
-          "required": ["step"]
+          "required": [
+            "step"
+          ]
         },
         "output": {
           "type": "integer",
@@ -23,7 +31,10 @@
           "maximum": 5000
         },
         "invertible": true,
-        "search": ["exact", "range"],
+        "search": [
+          "exact",
+          "range"
+        ],
         "on_invalid": "reject"
       },
       "unit": "m",
@@ -33,13 +44,19 @@
     "x": {
       "type": "spatial",
       "axis": "x",
-      "extent": [-180, 180],
+      "extent": [
+        -180,
+        180
+      ],
       "reference_system": 4326
     },
     "y": {
       "type": "spatial",
       "axis": "y",
-      "extent": [-60, 60],
+      "extent": [
+        -60,
+        60
+      ],
       "reference_system": 4326
     }
   }

@@ -1,11 +1,4 @@
 {
-  "_commentary": {
-    "purpose": "Demonstrates a leveled hierarchical dimension for administrative boundaries. Three-level GAUL hierarchy (Country → ADM1 → ADM2). The tree structure is imposed by level definitions: each level specifies which generator output field is the member ID (member_id_property), which field carries the cross-level parent reference (parent_id_property), and a parameters object that the generator uses to filter members to that level. This mirrors geoid's HierarchyStrategy.FIXED pattern (item_code_field, parent_code_field, SQL condition) in a backend-agnostic form.",
-    "strategy": "leveled — hierarchy is NOT encoded in the data; it is defined by level rules and generator parameters",
-    "live_root_endpoint": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?limit=5",
-    "live_children_endpoint": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/children?parent=Africa&limit=5",
-    "live_ancestors_endpoint": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/ancestors?member=ETH"
-  },
   "type": "Collection",
   "id": "gaul-admin-boundaries",
   "stac_version": "1.0.0",
@@ -16,21 +9,43 @@
   "description": "FAO Global Administrative Unit Layers (GAUL) — administrative boundaries at country, ADM1, and ADM2 levels for 195 countries.",
   "license": "proprietary",
   "extent": {
-    "spatial": {"bbox": [[-180, -90, 180, 90]]},
-    "temporal": {"interval": [["2015-01-01T00:00:00Z", null]]}
+    "spatial": {
+      "bbox": [
+        [
+          -180,
+          -90,
+          180,
+          90
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2015-01-01T00:00:00Z",
+          null
+        ]
+      ]
+    }
   },
   "links": [],
   "cube:dimensions": {
     "x": {
       "type": "spatial",
       "axis": "x",
-      "extent": [-180, 180],
+      "extent": [
+        -180,
+        180
+      ],
       "reference_system": 4326
     },
     "y": {
       "type": "spatial",
       "axis": "y",
-      "extent": [-90, 90],
+      "extent": [
+        -90,
+        90
+      ],
       "reference_system": 4326
     },
     "admin": {
@@ -38,14 +53,15 @@
       "description": "Administrative boundary dimension. Three-level hierarchy: Country (L0), ADM1 sub-national unit (L1), ADM2 district (L2). Leveled strategy: hierarchy is defined by level rules, not by parent fields stored on members. Clients navigate via /children endpoint.",
       "hierarchy": {
         "strategy": "leveled",
-        "_strategy_note": "informational — the generator type 'leveled-tree' is the authoritative source of hierarchy behaviour",
         "levels": [
           {
             "id": "L0",
             "label": "Country",
             "size": 195,
             "member_id_property": "iso_code",
-            "parameters": {"level": 0},
+            "parameters": {
+              "level": 0
+            },
             "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=0&limit=5"
           },
           {
@@ -55,7 +71,9 @@
             "parent_level": "L0",
             "member_id_property": "adm1_code",
             "parent_id_property": "iso_code",
-            "parameters": {"level": 1},
+            "parameters": {
+              "level": 1
+            },
             "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=1&limit=5"
           },
           {
@@ -65,7 +83,9 @@
             "parent_level": "L1",
             "member_id_property": "adm2_code",
             "parent_id_property": "adm1_code",
-            "parameters": {"level": 2},
+            "parameters": {
+              "level": 2
+            },
             "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=2&limit=5"
           }
         ]
@@ -77,7 +97,11 @@
           "properties": {
             "level": {
               "type": "integer",
-              "enum": [0, 1, 2],
+              "enum": [
+                0,
+                1,
+                2
+              ],
               "description": "Hierarchy level to generate members for. 0=Country, 1=ADM1, 2=ADM2."
             },
             "parent": {
@@ -89,64 +113,37 @@
         "output": {
           "type": "object",
           "properties": {
-            "code":       {"type": "string", "description": "Member identifier (iso_code, adm1_code, or adm2_code depending on level)"},
-            "label":      {"type": "string", "description": "Human-readable name"},
-            "level":      {"type": "integer", "description": "Hierarchy level (0, 1, or 2)"},
-            "iso_code":   {"type": "string", "description": "ISO 3166-1 alpha-3 country code (present on all levels)"}
+            "code": {
+              "type": "string",
+              "description": "Member identifier (iso_code, adm1_code, or adm2_code depending on level)"
+            },
+            "label": {
+              "type": "string",
+              "description": "Human-readable name"
+            },
+            "level": {
+              "type": "integer",
+              "description": "Hierarchy level (0, 1, or 2)"
+            },
+            "iso_code": {
+              "type": "string",
+              "description": "ISO 3166-1 alpha-3 country code (present on all levels)"
+            }
           },
-          "required": ["code", "label", "level"]
+          "required": [
+            "code",
+            "label",
+            "level"
+          ]
         },
         "invertible": false,
-        "search": ["exact", "like"],
+        "search": [
+          "exact",
+          "like"
+        ],
         "hierarchical": true
       },
       "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=0&limit=5"
     }
-  },
-  "_href_response_page1": {
-    "_description": "Example response from GET /members?level=0&limit=5 — root (country) level members",
-    "dimension": "world-admin",
-    "generator": "leveled-tree",
-    "numberMatched": 195,
-    "numberReturned": 5,
-    "values": [
-      {"code": "AFG", "label": "Afghanistan", "level": 0, "iso_code": "AFG"},
-      {"code": "ALB", "label": "Albania",     "level": 0, "iso_code": "ALB"},
-      {"code": "DZA", "label": "Algeria",     "level": 0, "iso_code": "DZA"},
-      {"code": "AND", "label": "Andorra",     "level": 0, "iso_code": "AND"},
-      {"code": "AGO", "label": "Angola",      "level": 0, "iso_code": "AGO"}
-    ],
-    "links": [
-      {"rel": "self",  "href": ".../world-admin/members?level=0&limit=5&offset=0"},
-      {"rel": "next",  "href": ".../world-admin/members?level=0&limit=5&offset=5"}
-    ]
-  },
-  "_children_response_example": {
-    "_description": "Example response from GET /children?parent=AFG&limit=5 — ADM1 children of Afghanistan",
-    "dimension": "world-admin",
-    "parent": "AFG",
-    "numberMatched": 34,
-    "numberReturned": 5,
-    "values": [
-      {"code": "AFG-BAD", "label": "Badakhshan", "level": 1, "iso_code": "AFG"},
-      {"code": "AFG-BAG", "label": "Badghis",    "level": 1, "iso_code": "AFG"},
-      {"code": "AFG-BAL", "label": "Baghlan",    "level": 1, "iso_code": "AFG"},
-      {"code": "AFG-BAM", "label": "Bamyan",     "level": 1, "iso_code": "AFG"},
-      {"code": "AFG-DAY", "label": "Daykundi",   "level": 1, "iso_code": "AFG"}
-    ],
-    "links": [
-      {"rel": "self",   "href": ".../world-admin/children?parent=AFG&limit=5&offset=0"},
-      {"rel": "next",   "href": ".../world-admin/children?parent=AFG&limit=5&offset=5"},
-      {"rel": "parent", "href": ".../world-admin/members?code=AFG"}
-    ]
-  },
-  "_ancestors_response_example": {
-    "_description": "Example response from GET /ancestors?member=ETH-TIG — ancestor chain for Tigray region",
-    "dimension": "world-admin",
-    "member": "ETH-TIG",
-    "ancestors": [
-      {"code": "ETH",     "label": "Ethiopia", "level": 0},
-      {"code": "ETH-TIG", "label": "Tigray",   "level": 1}
-    ]
   }
 }
