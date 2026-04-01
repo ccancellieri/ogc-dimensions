@@ -3,7 +3,7 @@
     "purpose": "Demonstrates a recursive hierarchical dimension for a statistical indicator tree. FAO FAOSTAT organizes ~10,000 indicators in a 4-level tree: Domain → Group → Indicator → Sub-indicator. The recursive strategy is used: each member in the generator output carries a parent_code field that points to its parent. Clients traverse the tree by following /children links, analogous to navigating a SKOS concept scheme via skos:narrower relationships.",
     "strategy": "recursive — hierarchy IS encoded in the data; each member carries parent_code in its output object",
     "skos_analogy": "parent_code in generator output ↔ skos:broader; /children endpoint ↔ skos:narrower traversal",
-    "live_root_endpoint": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/generate?limit=5",
+    "live_root_endpoint": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/members?limit=5",
     "live_children_endpoint": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/children?parent=QC&limit=5"
   },
   "type": "Collection",
@@ -80,11 +80,11 @@
         "on_invalid": "accept",
         "hierarchical": true
       },
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/members?limit=5"
     }
   },
   "_href_response_page1": {
-    "_description": "Example response from GET /generate?limit=5 — root (domain) level indicators, parent_code=null",
+    "_description": "Example response from GET /members?limit=5 — root (domain) level indicators, parent_code=null",
     "dimension": "faostat-indicators",
     "numberMatched": 12,
     "numberReturned": 5,
@@ -96,8 +96,8 @@
       {"code": "FA",  "label": "Food Aid Shipments",     "parent_code": null, "unit": "various"}
     ],
     "links": [
-      {"rel": "self", "href": ".../faostat-indicators/generate?limit=5&offset=0"},
-      {"rel": "next", "href": ".../faostat-indicators/generate?limit=5&offset=5"}
+      {"rel": "self", "href": ".../faostat-indicators/members?limit=5&offset=0"},
+      {"rel": "next", "href": ".../faostat-indicators/members?limit=5&offset=5"}
     ]
   },
   "_children_response_example": {
@@ -116,7 +116,7 @@
     "links": [
       {"rel": "self",   "href": ".../faostat-indicators/children?parent=QC&limit=5&offset=0"},
       {"rel": "next",   "href": ".../faostat-indicators/children?parent=QC&limit=5&offset=5"},
-      {"rel": "parent", "href": ".../faostat-indicators/generate?code=QC"}
+      {"rel": "parent", "href": ".../faostat-indicators/members?code=QC"}
     ]
   },
   "_ancestors_response_example": {

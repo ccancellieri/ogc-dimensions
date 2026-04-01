@@ -2,7 +2,7 @@
 
 Implements the generator capabilities per dimension:
   GET  /dimensions                              -- list registered dimensions
-  GET  /dimensions/{dimension_id}/generate      -- paginated members
+  GET  /dimensions/{dimension_id}/members      -- paginated members
   GET  /dimensions/{dimension_id}/extent        -- boundaries
   GET  /dimensions/{dimension_id}/inverse       -- single value inverse
   POST /dimensions/{dimension_id}/inverse       -- batch inverse
@@ -163,8 +163,8 @@ async def list_dimensions(request: Request):
                 },
                 "links": [
                     {
-                        "rel": "generate",
-                        "href": f"{base}/{dim_id}/generate",
+                        "rel": "members",
+                        "href": f"{base}/{dim_id}/members",
                         "type": "application/json",
                     },
                     {
@@ -179,7 +179,7 @@ async def list_dimensions(request: Request):
     }
 
 
-@router.get("/{dimension_id}/generate")
+@router.get("/{dimension_id}/members")
 async def generate(
     request: Request,
     dimension_id: str,
@@ -219,7 +219,7 @@ async def generate(
     else:
         values = [_member_to_dict(m, gen=link_gen, dim_base_url=link_base) for m in result.members]
 
-    self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/generate
+    self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/members
     _extra_qs = ""
     if parent:
         _extra_qs += f"&parent={parent}"
@@ -241,7 +241,7 @@ async def generate(
     if parent and gen.hierarchical:
         dim_base = _parent_url(request)  # .../dimensions/{id}
         links.append(
-            {"rel": "parent", "href": f"{dim_base}/generate?code={parent}", "type": "application/json"}
+            {"rel": "parent", "href": f"{dim_base}/members?code={parent}", "type": "application/json"}
         )
 
     response: dict[str, Any] = {
@@ -451,7 +451,7 @@ async def children(
             {"rel": "prev", "href": f"{self_url}?parent={parent}&limit={limit}&offset={prev_offset}", "type": "application/json"}
         )
     resp_links.append(
-        {"rel": "parent", "href": f"{dim_base}/generate?code={parent}", "type": "application/json"}
+        {"rel": "parent", "href": f"{dim_base}/members?code={parent}", "type": "application/json"}
     )
 
     return {

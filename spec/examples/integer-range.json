@@ -28,7 +28,7 @@
       },
       "unit": "m",
       "size": 51,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/members?limit=5"
     },
     "x": {
       "type": "spatial",

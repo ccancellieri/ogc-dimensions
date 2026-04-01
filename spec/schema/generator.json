@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/generator.json",
   "title": "Dimension Generator",
-  "description": "Algorithmic member generation with machine-discoverable OpenAPI definitions, applicable to any dimension type. A generator exposes up to five capabilities as endpoints: /generate (paginated member production), /extent (boundary computation), /inverse (value-to-coordinate mapping; requires invertible:true), /search (query-based member discovery), and the optional hierarchical pair /children + /ancestors (requires Hierarchical conformance level). Capabilities are declared in the generator's OpenAPI specification.",
+  "description": "Algorithmic member generation with machine-discoverable OpenAPI definitions, applicable to any dimension type. A generator exposes up to five capabilities as endpoints: /members (paginated member production), /extent (boundary computation), /inverse (value-to-coordinate mapping; requires invertible:true), /search (query-based member discovery), and the optional hierarchical pair /children + /ancestors (requires Hierarchical conformance level). Capabilities are declared in the generator's OpenAPI specification.",
   "type": "object",
   "required": ["type", "output"],
   "properties": {
@@ -46,7 +46,7 @@
     "hierarchical": {
       "type": "boolean",
       "default": false,
-      "description": "true if the generator supports Hierarchical conformance level: /children, /ancestors, and the optional ?parent= filter on /generate. SHOULD be true when the dimension declares a hierarchy property. The generator's /children endpoint follows the same pagination contract as /generate and mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members rather than collections."
+      "description": "true if the generator supports Hierarchical conformance level: /children, /ancestors, and the optional ?parent= filter on /members. SHOULD be true when the dimension declares a hierarchy property. The generator's /children endpoint follows the same pagination contract as /members and mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members rather than collections."
     },
     "navigable": {
       "type": "boolean",

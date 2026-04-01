@@ -49,7 +49,7 @@ Link to a paginated endpoint returning dimension values. When present, `values` 
 "time": {
   "type": "temporal",
   "size": 900,
-  "href": "https://example.org/dimensions/dekadal/generate?limit=100"
+  "href": "https://example.org/dimensions/dekadal/members?limit=100"
 }
 ```
 
@@ -75,12 +75,12 @@ Algorithmic member generation with machine-discoverable OpenAPI definitions. App
     "search": ["exact", "range", "like"]
   },
   "size": 900,
-  "href": "https://example.org/dimensions/dekadal/generate?limit=100"
+  "href": "https://example.org/dimensions/dekadal/members?limit=100"
 }
 ```
 
 Generators expose capabilities through standard OpenAPI interfaces:
-- `/generate` -- paginated member production (unified with `href`)
+- `/members` -- paginated member production (unified with `href`)
 - `/extent` -- boundary computation
 - `/inverse` (optional) -- value-to-coordinate mapping for ingestion validation
 - `/search` (optional) -- query-based member discovery
@@ -90,7 +90,7 @@ Generators expose capabilities through standard OpenAPI interfaces:
 Tree structure metadata for hierarchical dimensions. The `hierarchy` object is purely descriptive — the generator type determines how hierarchy operations are implemented. Two patterns are documented:
 
 - **Recursive generators** (e.g., `static-tree`): Each member carries a `parent_code` field (analogous to `skos:broader`). Root members have `parent_code: null`. Clients navigate via `/children?parent=X` and `/ancestors?member=X`.
-- **Leveled generators** (e.g., `leveled-tree`): Hierarchy imposed by named level definitions, each with `member_id_property`, `parent_id_property`, `parent_level`, and `parameters` for level-scoped generator filtering. Adds `?level=N` to `/generate`.
+- **Leveled generators** (e.g., `leveled-tree`): Hierarchy imposed by named level definitions, each with `member_id_property`, `parent_id_property`, `parent_level`, and `parameters` for level-scoped generator filtering. Adds `?level=N` to `/members`.
 
 Adding a new hierarchy strategy means adding a new generator type — no schema changes required.
 

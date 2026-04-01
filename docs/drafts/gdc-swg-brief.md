@@ -58,7 +58,7 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 
 | Level | Capabilities | Requirement |
 |---|---|---|
-| Basic | /generate + /extent | MUST support |
+| Basic | /members + /extent | MUST support |
 | Invertible | + /inverse | Invertible generators only |
 | Searchable | + /search (exact, range, like) | SHOULD support |
 | Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |

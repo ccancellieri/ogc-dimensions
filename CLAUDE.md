@@ -8,14 +8,14 @@ Spec + paper + reference implementation for scalable datacube dimension generato
 -> spec/examples: Worked collection JSON examples (dekadal, pentadal, integer-range, legacy bridge)
 -> paper: Scientific manuscript (IMRAD, Markdown)
 -> reference-implementation/src/ogc_dimensions/generators: Python generator implementations (base protocol, dekadal, pentadal, integer-range)
--> reference-implementation/src/ogc_dimensions/api: FastAPI app exposing /generate, /extent, /inverse, /search
+-> reference-implementation/src/ogc_dimensions/api: FastAPI app exposing /members, /extent, /inverse, /search
 
 ## Key Concepts
 
 - `size` + `href`: paginated dimension members (OGC API - Common Part 2)
 - `generator` object: algorithmic member generation with OpenAPI discovery
-- Bijective inversion: value-to-coordinate mapping for ingestion validation
-- Five conformance levels: Basic > Invertible > Searchable > Similarity > Intelligent
+- Invertible inversion: value-to-coordinate mapping for ingestion validation
+- Five conformance levels: Basic > Invertible > Searchable > Hierarchical > Similarity
 
 ## Conventions
 
