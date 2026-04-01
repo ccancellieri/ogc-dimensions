@@ -84,7 +84,7 @@ class DimensionGenerator(ABC):
     """Abstract base class for all dimension generators.
 
     Subclasses MUST implement generate() and extent() (Basic conformance).
-    Subclasses SHOULD implement inverse() if bijective.
+    Subclasses SHOULD implement inverse() if invertible.
     Subclasses MAY implement search() for Searchable conformance.
     """
 
@@ -96,7 +96,7 @@ class DimensionGenerator(ABC):
 
     @property
     @abstractmethod
-    def bijective(self) -> bool:
+    def invertible(self) -> bool:
         """Whether this generator supports inverse operations."""
         ...
 
@@ -109,7 +109,7 @@ class DimensionGenerator(ABC):
     def capabilities(self) -> list[GeneratorCapability]:
         """Supported capabilities."""
         caps = [GeneratorCapability.GENERATE, GeneratorCapability.EXTENT]
-        if self.bijective:
+        if self.invertible:
             caps.append(GeneratorCapability.INVERSE)
         if self.search_protocols:
             caps.append(GeneratorCapability.SEARCH)
@@ -141,7 +141,7 @@ class DimensionGenerator(ABC):
         ...
 
     def inverse(self, value: str) -> InverseResult:
-        """Map a value back to its dimension member. Requires bijective=True."""
+        """Map a value back to its dimension member. Requires invertible=True."""
         raise NotImplementedError(
             f"Generator '{self.generator_type}' does not support inverse operations."
         )
@@ -175,6 +175,15 @@ class DimensionGenerator(ABC):
         raise NotImplementedError(
             f"Generator '{self.generator_type}' does not support Hierarchical operations."
         )
+
+    def has_children(self, member_code: str) -> bool:
+        """Return True if *member_code* has at least one child (Hierarchical conformance).
+
+        Used to decide whether to emit a ``children`` navigation link for a
+        member.  The default implementation returns ``False``; hierarchical
+        generators SHOULD override this.
+        """
+        return False
 
     def ancestors(self, member_code: str) -> list[dict[str, Any]]:
         """Return ancestor chain from root to member_code inclusive (Hierarchical conformance)."""

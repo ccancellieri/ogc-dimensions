@@ -12,7 +12,7 @@ Spec + paper + reference implementation for scalable datacube dimension generato
 
 ## Key Concepts
 
-- `size` + `values_href`: paginated dimension members (OGC API - Common Part 2)
+- `size` + `href`: paginated dimension members (OGC API - Common Part 2)
 - `generator` object: algorithmic member generation with OpenAPI discovery
 - Bijective inversion: value-to-coordinate mapping for ingestion validation
 - Five conformance levels: Basic > Invertible > Searchable > Similarity > Intelligent

@@ -2,83 +2,71 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/hierarchy.json",
   "title": "Dimension Hierarchy",
-  "description": "Describes the tree structure of a hierarchical dimension, such as administrative boundaries or coded indicator trees. Two strategies are defined: 'leveled' for hierarchies where the tree structure is imposed by named level definitions (the hierarchy is not encoded in the data itself), and 'recursive' for hierarchies where each member carries a parent reference in its own fields.",
+  "description": "Describes the tree structure of a hierarchical dimension, such as administrative boundaries or coded indicator trees. The generator type determines how hierarchy operations (/children, /ancestors, ?parent=) are implemented — the hierarchy object is purely descriptive metadata for clients. 'levels' is present when the generator uses a leveled strategy (hierarchy imposed by named level definitions). 'parent_property' is present when the generator uses a recursive strategy (each member carries a parent reference). Both may be absent for custom generators that encode hierarchy differently. Navigation: when the generator declares navigable:true and a client passes ?links=true, each member in a /generate or /children response MAY include per-member navigation links (rel:children for non-leaf members, rel:ancestors). By default, member-level links are suppressed to minimize response size; response-level pagination links (self, next, prev) are always included.",
   "type": "object",
-  "required": ["strategy"],
-  "oneOf": [
-    {
-      "title": "Leveled hierarchy",
-      "description": "The hierarchy is defined by named levels. Each level specifies which generator output field serves as the member identifier and which field contains the cross-level parent reference. Generator parameters per level filter members to that level. This strategy generalizes server-side predicate-based hierarchies (e.g., SQL condition-based level partitioning) into a backend-agnostic form: conditions are expressed as generator parameters encoded in each level's values_href.",
-      "properties": {
-        "strategy": {"const": "leveled"},
-        "levels": {
-          "type": "array",
-          "minItems": 1,
-          "description": "Ordered list of hierarchy levels, from coarsest (index 0) to finest.",
-          "items": {
-            "type": "object",
-            "required": ["id", "label"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Unique identifier for this level within the hierarchy (e.g., 'L0', 'country', 'adm1')."
-              },
-              "label": {
-                "type": "string",
-                "description": "Human-readable name for this level (e.g., 'Country', 'Region')."
-              },
-              "size": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Number of distinct members at this level. If omitted, clients retrieve count from the generator's /extent endpoint."
-              },
-              "parent_level": {
-                "type": "string",
-                "description": "The id of the parent level in this hierarchy. Absent for the root level. Corresponds to geoid's parent_hierarchy_id."
-              },
-              "member_id_property": {
-                "type": "string",
-                "description": "The property in the generator's output object that uniquely identifies members at this level. Corresponds to geoid's item_code_field. Defaults to 'code' if omitted."
-              },
-              "parent_id_property": {
-                "type": "string",
-                "description": "The property in the generator's output object that holds the identifier of the parent member (from the parent level). Corresponds to geoid's parent_code_field. Required when parent_level is set."
-              },
-              "parameters": {
-                "description": "Generator parameters that, when passed to the /generate endpoint, produce only members belonging to this level. The backend-agnostic generalization of a SQL condition or CQL filter. These parameters are also reflected in values_href as query parameters.",
-                "type": "object"
-              },
-              "values_href": {
-                "type": "string",
-                "format": "uri-reference",
-                "description": "Link to the paginated endpoint for members at this level. Parameters from the 'parameters' field SHOULD be encoded as query parameters on this URI."
-              }
-            }
+  "properties": {
+    "strategy": {
+      "type": "string",
+      "enum": ["leveled", "recursive", "composite"],
+      "description": "Informational annotation describing the hierarchy strategy. The generator type is the authoritative source of hierarchy behaviour — this field documents the strategy for human readers and clients that want to render appropriate UI. 'leveled': hierarchy is imposed by named level definitions; the tree structure is not encoded in member data. 'recursive': each member carries a parent reference field in its output. 'composite': leveled at the top levels, recursive within a level (future)."
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered list of hierarchy levels, from coarsest (index 0) to finest. Present when the generator uses a leveled strategy. Each level specifies the generator parameters that select its members, the output field that serves as the member ID, and the output field that carries the cross-level parent reference.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this level within the hierarchy (e.g., 'L0', 'country', 'adm1')."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable name for this level (e.g., 'Country', 'Region')."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of distinct members at this level. If omitted, clients retrieve count from the generator's /extent endpoint."
+          },
+          "parent_level": {
+            "type": "string",
+            "description": "The id of the parent level in this hierarchy. Absent for the root level."
+          },
+          "member_id_property": {
+            "type": "string",
+            "description": "The property in the generator's output object that uniquely identifies members at this level. Defaults to 'code' if omitted."
+          },
+          "parent_id_property": {
+            "type": "string",
+            "description": "The property in the generator's output object that holds the identifier of the parent member (from the parent level). Required when parent_level is set."
+          },
+          "parameters": {
+            "description": "Generator parameters that, when passed to the /generate endpoint, produce only members belonging to this level. The backend-agnostic generalization of a SQL condition or CQL filter.",
+            "type": "object"
+          },
+          "href": {
+            "type": "string",
+            "format": "uri-reference",
+            "description": "Link to the paginated endpoint for members at this level. Parameters from the 'parameters' field SHOULD be encoded as query parameters on this URI."
           }
         }
-      },
-      "required": ["strategy", "levels"]
+      }
     },
-    {
-      "title": "Recursive hierarchy",
-      "description": "The hierarchy is encoded inside the data: each member's generator output includes a parent reference field. The generator handles /children?parent=X and /ancestors?member=X by filtering on this field. Corresponds to geoid's RECURSIVE strategy. Aligns with W3C SKOS skos:broader/skos:narrower semantics expressed as a RESTful paginated interface.",
-      "properties": {
-        "strategy": {"const": "recursive"},
-        "parent_property": {
-          "type": "string",
-          "description": "The property in the generator's output schema that holds the parent member's code. Null for root members. The generator output schema SHOULD declare this field. Corresponds to geoid's parent_code_field and to skos:broader in SKOS vocabularies."
-        },
-        "root_filter": {
-          "type": "string",
-          "description": "Optional generator parameter expression that selects root (top-level) members when passed to /generate. Corresponds to geoid's root_condition. If omitted, root members are those whose parent_property is null or absent."
-        },
-        "depth": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Optional maximum depth of the tree. Informational; generators MAY enforce this limit."
-        }
-      },
-      "required": ["strategy", "parent_property"]
+    "parent_property": {
+      "type": "string",
+      "description": "The property in the generator's output schema that holds the parent member's code. Null for root members. Present when the generator uses a recursive strategy. Corresponds to skos:broader in SKOS vocabularies."
+    },
+    "root_filter": {
+      "type": "string",
+      "description": "Optional generator parameter expression that selects root (top-level) members when passed to /generate. Used with recursive generators. If omitted, root members are those whose parent_property is null or absent."
+    },
+    "depth": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optional maximum depth of the tree. Informational; generators MAY enforce this limit."
     }
-  ]
+  }
 }

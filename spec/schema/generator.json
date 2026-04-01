@@ -2,50 +2,31 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/generator.json",
   "title": "Dimension Generator",
-  "description": "Algorithmic member generation with machine-discoverable OpenAPI definitions, applicable to any dimension type. A generator exposes up to five capabilities as endpoints: /generate (paginated member production), /extent (boundary computation), /inverse (value-to-coordinate mapping; requires bijective:true), /search (query-based member discovery), and the optional hierarchical pair /children + /ancestors (requires Hierarchical conformance level). Capabilities are declared in the generator's OpenAPI specification.",
+  "description": "Algorithmic member generation with machine-discoverable OpenAPI definitions, applicable to any dimension type. A generator exposes up to five capabilities as endpoints: /generate (paginated member production), /extent (boundary computation), /inverse (value-to-coordinate mapping; requires invertible:true), /search (query-based member discovery), and the optional hierarchical pair /children + /ancestors (requires Hierarchical conformance level). Capabilities are declared in the generator's OpenAPI specification.",
   "type": "object",
   "required": ["type", "output"],
   "properties": {
     "type": {
-      "description": "Short identifier for well-known algorithms or full URI for custom generators.",
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "dekadal",
-            "pentadal-monthly",
-            "pentadal-annual",
-            "iso-week",
-            "integer-range",
-            "grid-index",
-            "static-tree"
-          ],
-          "description": "Well-known generator type. Resolves to a registered OGC Definition URI. 'static-tree' is a reference implementation type for in-memory hierarchical trees."
-        },
-        {
-          "type": "string",
-          "format": "uri",
-          "description": "Full URI for custom generator definitions."
-        }
-      ]
+      "type": "string",
+      "description": "Generator type identifier. Short identifiers name well-known algorithms maintained by the OGC Naming Authority; full URIs identify custom generators whose OpenAPI definition is given in the 'api' field. Well-known types include 'dekadal' (FAO 10-day calendar, 36/year), 'pentadal-monthly' (month-aligned 5-day, 72/year), 'pentadal-annual' (year-aligned 5-day, 73/year), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), and 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). This list is extensible: implementations MAY register additional well-known types through the OGC Naming Authority, and custom generators use a full URI as the type value."
     },
     "api": {
       "type": "string",
       "format": "uri",
-      "description": "OpenAPI definition URI. REQUIRED for custom generators. Implicit (resolvable from type) for well-known types. Machine clients fetch this to discover all available endpoints and parameters."
+      "description": "OpenAPI definition URI. REQUIRED when type is a full URI (custom generator). For well-known types the API definition is implicit (resolvable from the registered OGC Definition URI). Machine clients fetch this to discover all available endpoints and parameters."
     },
     "parameters": {
-      "description": "Default input parameters for the algorithm, defined per JSON Schema 2020-12. Maps to the OpenAPI request schema. For hierarchical generators using 'leveled' strategy, individual hierarchy levels override these defaults via their own parameters object.",
+      "description": "Default input parameters for the algorithm, defined per JSON Schema 2020-12. Maps to the OpenAPI request schema. For hierarchical generators using a leveled strategy, individual hierarchy levels override these defaults via their own parameters object.",
       "$ref": "https://json-schema.org/draft/2020-12/schema"
     },
     "output": {
       "description": "Type and structure of each generated member, defined per JSON Schema 2020-12. For recursive hierarchical generators, the output object SHOULD include the field named in hierarchy.parent_property, typed as string or null (null for root members).",
       "$ref": "https://json-schema.org/draft/2020-12/schema"
     },
-    "bijective": {
+    "invertible": {
       "type": "boolean",
       "default": false,
-      "description": "true if the generator supports inverse operations (Invertible conformance level). Exposes /inverse endpoint: maps a raw value back to the dimension member it belongs to. Most useful for deterministic generators such as temporal calendars and integer ranges."
+      "description": "true if the generator supports inverse operations (Invertible conformance level). Exposes /inverse endpoint: maps a raw value back to the dimension member it belongs to. The forward function is a total surjection from domain values to members, partitioning the domain into disjoint intervals; /inverse computes the unique member containing a given value. Most useful for deterministic generators such as temporal calendars and integer ranges."
     },
     "search": {
       "type": "array",
@@ -60,28 +41,24 @@
       "type": "string",
       "enum": ["reject", "accept", "warn"],
       "default": "reject",
-      "description": "Item ingestion behavior when inverse validation fails (bijective generators only). 'reject': return 422, block ingestion. 'accept': allow the item and grow the dimension. 'warn': allow the item and emit a warning."
+      "description": "Item ingestion behavior when inverse validation fails (invertible generators only). 'reject': return 422, block ingestion. 'accept': allow the item and grow the dimension. 'warn': allow the item and emit a warning. Ignored when invertible is false."
     },
     "hierarchical": {
       "type": "boolean",
       "default": false,
       "description": "true if the generator supports Hierarchical conformance level: /children, /ancestors, and the optional ?parent= filter on /generate. SHOULD be true when the dimension declares a hierarchy property. The generator's /children endpoint follows the same pagination contract as /generate and mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members rather than collections."
+    },
+    "navigable": {
+      "type": "boolean",
+      "default": false,
+      "description": "true if the generator supports per-member navigation links (children, ancestors) when the client requests them via ?links=true. Requires hierarchical:true. When navigable is true and a client passes ?links=true, each member object in the response MAY include a 'links' array with rel:children (present only for non-leaf members) and rel:ancestors entries. By default (?links=false or omitted), member-level links are suppressed to minimize response size. Response-level pagination links (self, next, prev) are always included regardless of this setting."
     }
   },
   "if": {
-    "not": {
-      "properties": {
-        "type": {
-          "enum": [
-            "dekadal",
-            "pentadal-monthly",
-            "pentadal-annual",
-            "iso-week",
-            "integer-range",
-            "grid-index",
-            "static-tree"
-          ]
-        }
+    "properties": {
+      "type": {
+        "type": "string",
+        "format": "uri"
       }
     }
   },

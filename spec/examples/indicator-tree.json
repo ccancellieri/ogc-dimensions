@@ -75,15 +75,15 @@
           },
           "required": ["code", "label", "parent_code"]
         },
-        "bijective": false,
+        "invertible": false,
         "search": ["exact", "like"],
         "on_invalid": "accept",
         "hierarchical": true
       },
-      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/generate?limit=5"
     }
   },
-  "_values_href_response_page1": {
+  "_href_response_page1": {
     "_description": "Example response from GET /generate?limit=5 — root (domain) level indicators, parent_code=null",
     "dimension": "faostat-indicators",
     "numberMatched": 12,

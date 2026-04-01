@@ -7,7 +7,7 @@
 
 ## Title
 
-Scalable dimension members: `size`, `values_href`, `generator`, `hierarchy`, and `nominal`/`ordinal` types
+Scalable dimension members: `size`, `href`, `generator`, `hierarchy`, and `nominal`/`ordinal` types
 
 ## Body
 
@@ -41,7 +41,7 @@ Total member count. Allows clients to assess cardinality without downloading val
 
 This directly addresses #31.
 
-#### 2. `values_href` (string, URI, OPTIONAL)
+#### 2. `href` (string, URI, OPTIONAL)
 
 Link to a paginated endpoint returning dimension values. When present, `values` MAY be omitted. Follows OGC API - Common Part 2 pagination (`limit`/`offset`, `numberMatched`/`numberReturned`, `rel:next`/`rel:prev`).
 
@@ -49,7 +49,7 @@ Link to a paginated endpoint returning dimension values. When present, `values` 
 "time": {
   "type": "temporal",
   "size": 900,
-  "values_href": "https://example.org/dimensions/dekadal/generate?limit=100"
+  "href": "https://example.org/dimensions/dekadal/generate?limit=100"
 }
 ```
 
@@ -71,26 +71,28 @@ Algorithmic member generation with machine-discoverable OpenAPI definitions. App
         "end": {"type": "string", "format": "date"}
       }
     },
-    "bijective": true,
+    "invertible": true,
     "search": ["exact", "range", "like"]
   },
   "size": 900,
-  "values_href": "https://example.org/dimensions/dekadal/generate?limit=100"
+  "href": "https://example.org/dimensions/dekadal/generate?limit=100"
 }
 ```
 
 Generators expose capabilities through standard OpenAPI interfaces:
-- `/generate` -- paginated member production (unified with `values_href`)
+- `/generate` -- paginated member production (unified with `href`)
 - `/extent` -- boundary computation
 - `/inverse` (optional) -- value-to-coordinate mapping for ingestion validation
 - `/search` (optional) -- query-based member discovery
 
 #### 4. `hierarchy` (object, OPTIONAL)
 
-Tree structure for hierarchical dimensions. Two strategies:
+Tree structure metadata for hierarchical dimensions. The `hierarchy` object is purely descriptive — the generator type determines how hierarchy operations are implemented. Two patterns are documented:
 
-- **`recursive`**: Each member carries a `parent_code` field (analogous to `skos:broader`). Root members have `parent_code: null`. Clients navigate via `/children?parent=X` and `/ancestors?member=X`.
-- **`leveled`**: Hierarchy imposed by named level definitions, each with `member_id_property`, `parent_id_property`, `parent_level`, and `parameters` for level-scoped generator filtering. Generalizes SQL `condition`-per-level patterns to a backend-agnostic form.
+- **Recursive generators** (e.g., `static-tree`): Each member carries a `parent_code` field (analogous to `skos:broader`). Root members have `parent_code: null`. Clients navigate via `/children?parent=X` and `/ancestors?member=X`.
+- **Leveled generators** (e.g., `leveled-tree`): Hierarchy imposed by named level definitions, each with `member_id_property`, `parent_id_property`, `parent_level`, and `parameters` for level-scoped generator filtering. Adds `?level=N` to `/generate`.
+
+Adding a new hierarchy strategy means adding a new generator type — no schema changes required.
 
 The generator exposes two new endpoints when `hierarchical: true`:
 - `GET /children?parent=X` — direct children of X (mirrors [STAC API Children Extension](https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members)
@@ -109,7 +111,7 @@ The generator exposes two new endpoints when `hierarchical: true`:
        "parent_id_property": "iso_code", "parameters": {"level": 1}}
     ]
   },
-  "generator": {"type": "static-tree", "hierarchical": true}
+  "generator": {"type": "leveled-tree", "hierarchical": true}
 }
 ```
 
@@ -124,11 +126,11 @@ Both are standard statistical terms, already used in geoid's `DatacubeDimensionT
 
 ### Backwards compatibility
 
-- `size`, `values_href`, `generator`, `hierarchy` are all optional additions
+- `size`, `href`, `generator`, `hierarchy` are all optional additions
 - `nominal` and `ordinal` are new type enum values; unknown values are already tolerated
 - Existing clients ignore unknown properties
 - `values` still works for small dimensions
-- Legacy clients follow `values_href` and see standard paginated JSON (standard ISO dates when `?format=datetime`)
+- Legacy clients follow `href` and see standard paginated JSON (standard ISO dates when `?format=datetime`)
 - Generator-aware clients get additional capabilities (inverse, search, native notation)
 - Hierarchical clients navigate trees via `/children` and `/ancestors`
 

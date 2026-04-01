@@ -28,7 +28,7 @@ http://www.opengis.net/def/generator/ogc/0/{algorithm-name}
 | **Label** | Dekadal calendar generator |
 | **Description** | Generates dimension members for the dekadal calendar system used in agricultural drought monitoring. Divides each Gregorian month into three periods: days 1-10 (D1), days 11-20 (D2), and day 21 to month-end (D3). Produces 36 periods per year with variable-length D3 (8-11 days). |
 | **Notation** | `YYYY-Knn` where nn = 01..36 |
-| **Bijective** | Yes (any date maps to exactly one dekad) |
+| **Invertible** | Yes (any date maps to exactly one dekad) |
 | **Period lengths** | D1: always 10 days. D2: always 10 days. D3: 8 (Feb non-leap), 9 (Feb leap), 10 (30-day months), 11 (31-day months). |
 | **Reference implementation** | https://github.com/ccancellieri/ogc-dimensions |
 | **Prior art** | cadati (TU Wien, MIT): https://github.com/TUW-GEO/cadati |
@@ -43,7 +43,7 @@ http://www.opengis.net/def/generator/ogc/0/{algorithm-name}
 | **Label** | Month-based pentadal generator |
 | **Description** | Divides each Gregorian month into six 5-day periods. P1: days 1-5, P2: days 6-10, P3: days 11-15, P4: days 16-20, P5: days 21-25, P6: day 26 to month-end. Produces 72 periods per year with variable-length P6 (3-6 days). Used by CHIRPS, CDT, and FAO. |
 | **Notation** | `YYYY-Pnn` where nn = 01..72 |
-| **Bijective** | Yes |
+| **Invertible** | Yes |
 | **Period lengths** | P1-P5: always 5 days. P6: 3 (Feb non-leap), 4 (Feb leap), 5 (30-day months), 6 (31-day months). |
 | **Reference implementation** | https://github.com/ccancellieri/ogc-dimensions |
 | **OpenAPI definition** | `http://www.opengis.net/def/generator/ogc/0/pentadal-monthly/openapi.json` |
@@ -57,7 +57,7 @@ http://www.opengis.net/def/generator/ogc/0/{algorithm-name}
 | **Label** | Year-based pentadal generator |
 | **Description** | Counts consecutive 5-day periods from January 1. Periods 1-72 each cover exactly 5 days. Period 73 covers the remaining 5 days (non-leap year) or 6 days (leap year). Produces 73 periods per year. Used by GPCP and CPC/NOAA. |
 | **Notation** | `YYYY-Ann` where nn = 01..73 |
-| **Bijective** | Yes |
+| **Invertible** | Yes |
 | **Period lengths** | A01-A72: always 5 days. A73: 5 (non-leap) or 6 (leap year). |
 | **Reference implementation** | https://github.com/ccancellieri/ogc-dimensions |
 | **OpenAPI definition** | `http://www.opengis.net/def/generator/ogc/0/pentadal-annual/openapi.json` |
@@ -71,7 +71,7 @@ http://www.opengis.net/def/generator/ogc/0/{algorithm-name}
 | **Label** | Integer range generator |
 | **Description** | Generates integer dimension members from a minimum, maximum, and step. Applicable to elevation bands, percentile bins, quality flags, and other regularly-spaced integer dimensions. |
 | **Notation** | Plain integers |
-| **Bijective** | Yes (any integer maps to exactly one bin) |
+| **Invertible** | Yes (any integer maps to exactly one bin) |
 | **Parameters** | `min` (integer), `max` (integer), `step` (integer, default 1) |
 | **Reference implementation** | https://github.com/ccancellieri/ogc-dimensions |
 | **OpenAPI definition** | `http://www.opengis.net/def/generator/ogc/0/integer-range/openapi.json` |

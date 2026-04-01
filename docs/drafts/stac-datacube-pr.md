@@ -8,7 +8,7 @@
 
 ## Title
 
-feat: add `size`, `values_href`, and `generator` properties for scalable dimension members
+feat: add `size`, `href`, and `generator` properties for scalable dimension members
 
 ## Description
 
@@ -17,7 +17,7 @@ feat: add `size`, `values_href`, and `generator` properties for scalable dimensi
 Adds three optional, backwards-compatible properties to the dimension object schema to support dimensions with thousands to millions of members:
 
 - **`size`** (integer): total member count -- resolves #31
-- **`values_href`** (URI): link to paginated endpoint returning dimension values
+- **`href`** (URI): link to paginated endpoint returning dimension values
 - **`generator`** (object): algorithmic member generation with OpenAPI discovery
 
 ### Changes
@@ -34,7 +34,7 @@ Add to `properties`:
   "minimum": 0,
   "description": "Total number of discrete members in this dimension."
 },
-"values_href": {
+"href": {
   "type": "string",
   "format": "uri-reference",
   "description": "Link to a paginated endpoint returning dimension values. When present, values MAY be omitted."
@@ -67,10 +67,10 @@ Add to `$defs`:
     "output": {
       "description": "Output type per JSON Schema 2020-12."
     },
-    "bijective": {
+    "invertible": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the generator supports inverse mapping."
+      "description": "Whether the generator supports inverse mapping (Invertible conformance level)."
     },
     "search": {
       "type": "array",
@@ -93,7 +93,7 @@ Add to `$defs`:
 
 Add section "Scalable Dimensions" documenting:
 - `size` -- when to use, relationship to `values`
-- `values_href` -- pagination conventions (OGC API - Common Part 2)
+- `href` -- pagination conventions (OGC API - Common Part 2)
 - `generator` -- well-known types, custom generators, conformance levels
 
 #### Examples

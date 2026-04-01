@@ -85,7 +85,7 @@ class DekadalGenerator(DimensionGenerator):
         return "dekadal"
 
     @property
-    def bijective(self) -> bool:
+    def invertible(self) -> bool:
         return True
 
     @property

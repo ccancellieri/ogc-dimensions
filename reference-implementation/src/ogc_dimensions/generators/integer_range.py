@@ -32,7 +32,7 @@ class IntegerRangeGenerator(DimensionGenerator):
         return "integer-range"
 
     @property
-    def bijective(self) -> bool:
+    def invertible(self) -> bool:
         return True
 
     @property

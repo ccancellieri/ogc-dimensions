@@ -65,7 +65,7 @@ class PentadalMonthlyGenerator(DimensionGenerator):
         return "pentadal-monthly"
 
     @property
-    def bijective(self) -> bool:
+    def invertible(self) -> bool:
         return True
 
     @property
@@ -224,7 +224,7 @@ class PentadalAnnualGenerator(DimensionGenerator):
         return "pentadal-annual"
 
     @property
-    def bijective(self) -> bool:
+    def invertible(self) -> bool:
         return True
 
     @property

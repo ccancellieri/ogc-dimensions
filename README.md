@@ -4,7 +4,7 @@
 
 This repository contains the specification, scientific publication, and reference implementation for extending geospatial datacube standards (STAC Datacube Extension, OGC GeoDataCube API) with:
 
-1. **Paginated dimension members** -- `size` + `values_href` for dimensions with thousands to millions of members
+1. **Paginated dimension members** -- `size` + `href` for dimensions with thousands to millions of members
 2. **Dimension generators** -- algorithmic member generation with machine-discoverable OpenAPI definitions
 3. **Bijective inversion** -- value-to-coordinate mapping enabling dimension integrity enforcement at data ingestion
 4. **Similarity-driven navigation** -- searching dimension spaces by concept proximity, bridging OGC metadata with AI/ML
@@ -25,7 +25,7 @@ OGC Testbeds 17-20 ([21-027](https://docs.ogc.org/per/21-027.html), [23-047](htt
 ```
 ogc-dimensions/
 ├── spec/                     # Formal specification
-│   ├── schema/               # JSON Schema for generator, size, values_href
+│   ├── schema/               # JSON Schema for generator, size, href
 │   │   ├── dimension.json    # Extended dimension schema
 │   │   └── generator.json    # Generator object schema
 │   └── examples/             # Full collection JSON examples
@@ -160,22 +160,22 @@ curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/sea
 
 ### STAC Collection integration
 
-The `values_href` property in a STAC collection points directly to the generator's paginated endpoint. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete collection example where:
+The `href` property in a STAC collection points directly to the generator's paginated endpoint. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete collection example where:
 
 ```json
 {
   "cube:dimensions": {
     "time": {
       "type": "temporal",
-      "generator": { "type": "dekadal", "bijective": true },
+      "generator": { "type": "dekadal", "invertible": true },
       "size": 900,
-      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
     }
   }
 }
 ```
 
-Legacy clients follow `values_href` and see standard paginated JSON. Generator-aware clients read the `generator` object and use `/inverse`, `/search`, and format negotiation (`?format=datetime` vs `?format=native`).
+Legacy clients follow `href` and see standard paginated JSON. Generator-aware clients read the `generator` object and use `/inverse`, `/search`, and format negotiation (`?format=datetime` vs `?format=native`).
 
 The reference implementation is deployed as a [Dynastore](https://github.com/un-fao/dynastore) extension on Google Cloud Run. The `ogc-dimensions` package is installed as a pip dependency and mounted via the Dynastore extension protocol -- no code duplication.
 

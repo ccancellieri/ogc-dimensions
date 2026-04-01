@@ -25,14 +25,14 @@
           },
           "required": ["code", "start", "end"]
         },
-        "bijective": true,
+        "invertible": true,
         "search": ["exact", "range", "like"],
         "on_invalid": "reject"
       },
-      "step": "1K",
+      "step": null,
       "unit": "dekad",
       "size": 900,
-      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
     },
     "x": {
       "type": "spatial",
@@ -65,7 +65,7 @@
   ],
 
   "_commentary": {
-    "values_href_note": "The values_href points to the live reference implementation. Clients follow rel:next links to paginate through all 900 dekadal members. The limit=5 default produces 180 pages, making the pagination mechanics visible.",
+    "href_note": "The href points to the live reference implementation. Clients follow rel:next links to paginate through all 900 dekadal members. The limit=5 default produces 180 pages, making the pagination mechanics visible.",
     "live_endpoints": {
       "list_dimensions": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/",
       "generate_page_1": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=0",

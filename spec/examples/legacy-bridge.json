@@ -1,5 +1,5 @@
 {
-  "_comment": "Legacy client compatibility: dekadal dimension producing standard ISO dates. Legacy clients hit values_href and see a valid irregular temporal dimension without knowing about dekads. The format=datetime parameter ensures ISO output.",
+  "_comment": "Legacy client compatibility: dekadal dimension producing standard ISO dates. Legacy clients hit href and see a valid irregular temporal dimension without knowing about dekads. The format=datetime parameter ensures ISO output.",
 
   "type": "Collection",
   "id": "chirps-dekadal-legacy",
@@ -11,16 +11,16 @@
       "generator": {
         "type": "dekadal",
         "output": {"type": "string", "format": "date"},
-        "bijective": true
+        "invertible": true
       },
       "step": null,
       "size": 900,
-      "values_href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&format=datetime"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&format=datetime"
     }
   },
 
-  "_values_href_response_page1": {
-    "_note": "What a legacy client sees when it follows values_href. Standard ISO dates, standard pagination. No dekadal knowledge required.",
+  "_href_response_page1": {
+    "_note": "What a legacy client sees when it follows href. Standard ISO dates, standard pagination. No dekadal knowledge required.",
     "dimension": "dekadal",
     "generator": "dekadal",
     "numberMatched": 36,
