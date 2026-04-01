@@ -4,8 +4,8 @@ Two generator types are provided, each encapsulating its own hierarchy strategy:
 
   StaticTreeGenerator  (type: "static-tree")
     Recursive strategy: each member carries a ``parent_code`` field.
-    /generate          → root members (parent_code is None)
-    /generate?parent=X → delegates to /children (alias)
+    /members          → root members (parent_code is None)
+    /members?parent=X → delegates to /children (alias)
     /children?parent=X → direct children of X
     /ancestors?member=X → ancestor chain from root to X
 
@@ -14,8 +14,8 @@ Two generator types are provided, each encapsulating its own hierarchy strategy:
     Extends StaticTreeGenerator with a ``?level=N`` parameter that filters
     members to a specific level, mirroring the ``parameters`` object declared
     in each hierarchy level's metadata.
-    /generate?level=N         → all members at level N
-    /generate?level=N&parent=X → members at level N that are children of X
+    /members?level=N         → all members at level N
+    /members?level=N&parent=X → members at level N that are children of X
 
 Adding a new hierarchy strategy means adding a new generator subclass —
 no changes to the spec schema are required.
@@ -143,7 +143,7 @@ class StaticTreeGenerator(DimensionGenerator):
     means adding a new generator subclass, not changing the spec schema.
 
     Supports Hierarchical conformance level: ``/children``, ``/ancestors``,
-    and ``?parent=`` filter on ``/generate``.
+    and ``?parent=`` filter on ``/members``.
     """
 
     def __init__(self, nodes: list[dict[str, Any]] | None = None) -> None:

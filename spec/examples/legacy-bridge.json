@@ -15,7 +15,7 @@
       },
       "step": null,
       "size": 900,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&format=datetime"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&format=datetime"
     }
   },
 
@@ -35,12 +35,12 @@
     "links": [
       {
         "rel": "self",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=0",
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=0",
         "type": "application/json"
       },
       {
         "rel": "next",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=5",
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=5",
         "type": "application/json"
       }
     ]

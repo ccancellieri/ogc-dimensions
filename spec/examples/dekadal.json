@@ -32,7 +32,7 @@
       "step": null,
       "unit": "dekad",
       "size": 900,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5"
     },
     "x": {
       "type": "spatial",
@@ -68,8 +68,8 @@
     "href_note": "The href points to the live reference implementation. Clients follow rel:next links to paginate through all 900 dekadal members. The limit=5 default produces 180 pages, making the pagination mechanics visible.",
     "live_endpoints": {
       "list_dimensions": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/",
-      "generate_page_1": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=0",
-      "generate_page_2": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=5",
+      "generate_page_1": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=0",
+      "generate_page_2": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=5",
       "extent": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/extent",
       "inverse": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15",
       "search": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K*",

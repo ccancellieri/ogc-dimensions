@@ -113,8 +113,8 @@ A paginated response follows OGC API - Features conventions:
   "numberReturned": 5,
   "values": ["2024-K01", "2024-K02", "2024-K03", "2024-K04", "2024-K05"],
   "links": [
-    {"rel": "self",  "href": ".../generate?limit=5&offset=0"},
-    {"rel": "next",  "href": ".../generate?limit=5&offset=5"}
+    {"rel": "self",  "href": ".../members?limit=5&offset=0"},
+    {"rel": "next",  "href": ".../members?limit=5&offset=5"}
   ]
 }
 ```
@@ -141,11 +141,11 @@ The generator object contains the following fields:
 
 - **`on_invalid`** (string, OPTIONAL): Item ingestion behavior when inverse validation fails (`reject`, `accept`, `warn`).
 
-- **`hierarchical`** (boolean, OPTIONAL, default false): Whether the generator supports Hierarchical conformance level -- `/children`, `/ancestors`, and the `?parent=` filter on `/generate`. This property should be `true` when the dimension declares a `hierarchy` property. See Section 3.6.
+- **`hierarchical`** (boolean, OPTIONAL, default false): Whether the generator supports Hierarchical conformance level -- `/children`, `/ancestors`, and the `?parent=` filter on `/members`. This property should be `true` when the dimension declares a `hierarchy` property. See Section 3.6.
 
 - **`navigable`** (boolean, OPTIONAL, default false): Whether the generator supports per-member navigation links (`rel:children`, `rel:ancestors`) when clients request them via `?links=true`. Requires `hierarchical: true`. By default, member-level links are suppressed to minimize response size; response-level pagination links (`self`, `next`, `prev`) are always included.
 
-Each generator's OpenAPI specification exposes up to four capabilities: `/generate` for paginated member production, `/extent` for boundary computation, `/search` for query-based member discovery, and `/inverse` for value-to-coordinate mapping. The `/generate` endpoint is unified with `href` -- both point to the same paginated interface.
+Each generator's OpenAPI specification exposes up to four capabilities: `/members` for paginated member production, `/extent` for boundary computation, `/search` for query-based member discovery, and `/inverse` for value-to-coordinate mapping. The `/members` endpoint is unified with `href` -- both point to the same paginated interface.
 
 Content negotiation through the `format` parameter enables backwards compatibility: `format=datetime` (default) produces standard ISO timestamps that legacy clients understand; `format=native` produces custom notation (e.g., `YYYY-Knn` for dekadal codes); `format=structured` produces full objects with code, start date, end date, and additional metadata.
 
@@ -178,7 +178,7 @@ The following example shows a STAC collection with a dekadal temporal dimension 
       "step": null,
       "unit": "dekad",
       "size": 900,
-      "href": ".../dimensions/dekadal/generate?limit=100"
+      "href": ".../dimensions/dekadal/members?limit=100"
     }
   }
 }
@@ -217,7 +217,7 @@ We define five conformance levels as an additive hierarchy:
 
 | Level | Capabilities | Requirement |
 |---|---|---|
-| Basic | /generate + /extent | MUST support |
+| Basic | /members + /extent | MUST support |
 | Invertible | + /inverse | Invertible generators only |
 | Searchable | + /search (exact, range, like) | SHOULD support |
 | Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
@@ -233,7 +233,7 @@ We introduce a `hierarchy` property on the dimension object that describes the t
 
 The leveled strategy is used when the hierarchy is not encoded in the data itself but is imposed by named level definitions. This pattern arises when the underlying data store is a flat table with multiple columns representing different hierarchical levels: a row might carry `iso_code`, `adm1_code`, and `adm2_code` simultaneously, and the tree structure is derived by grouping rows by level rather than read from a parent reference field. Each level in the `levels` array specifies: `id` (a unique level identifier), `label` (a human-readable name), `parent_level` (the `id` of the parent level, absent on the root), `member_id_property` (which output field uniquely identifies members at this level), `parent_id_property` (which output field identifies the parent member at the parent level), and a `parameters` object encoding the generator parameters needed to filter members to this level. The `parameters` object is the backend-agnostic generalization of a SQL `WHERE` clause or CQL filter: the implementation details of how the filter is applied remain inside the generator, while the specification exposes only the parameter values. This design generalizes the operational experience of the geoid system, in which hierarchy rules encode SQL conditions per level alongside `item_code_field` and `parent_code_field` column mappings.
 
-Two generator endpoints implement tree navigation at the Hierarchical conformance level. The `GET /{dimension_id}/children?parent=X` endpoint returns the direct children of member X, using the same pagination envelope (`numberMatched`, `numberReturned`, `links`) as the `/generate` endpoint. The response additionally includes the parent code and a `rel:parent` link relation pointing to the parent member, mirroring the STAC API Children Extension's link relation conventions. The `GET /{dimension_id}/ancestors?member=X` endpoint returns the complete ancestor chain from root to member X inclusive, ordered from coarsest to finest granularity. For backwards compatibility, the existing `/generate` endpoint accepts an optional `?parent=X` query parameter as an alias for `/children?parent=X`, allowing clients that already use `href` for pagination to navigate the hierarchy without learning a new endpoint pattern.
+Two generator endpoints implement tree navigation at the Hierarchical conformance level. The `GET /{dimension_id}/children?parent=X` endpoint returns the direct children of member X, using the same pagination envelope (`numberMatched`, `numberReturned`, `links`) as the `/members` endpoint. The response additionally includes the parent code and a `rel:parent` link relation pointing to the parent member, mirroring the STAC API Children Extension's link relation conventions. The `GET /{dimension_id}/ancestors?member=X` endpoint returns the complete ancestor chain from root to member X inclusive, ordered from coarsest to finest granularity. For backwards compatibility, the existing `/members` endpoint accepts an optional `?parent=X` query parameter as an alias for `/children?parent=X`, allowing clients that already use `href` for pagination to navigate the hierarchy without learning a new endpoint pattern.
 
 The distinction between the two navigation endpoints reflects distinct client use cases. A mapping application rendering a country selector first calls `/children` with no parent (obtaining root members) to populate a continent dropdown, then calls `/children?parent=Africa` on user selection to populate a country dropdown. A data pipeline that receives an incoming observation labeled with a sub-national code calls `/ancestors?member=ETH-TIG` to resolve the full administrative path, validating the code against the dimension hierarchy and obtaining the ancestor codes needed for regional aggregation. Both operations are analogous to standard tree operations in relational systems (adjacency list queries) and graph databases (breadth-first traversal), expressed as a RESTful paginated API that requires no query language.
 
@@ -287,8 +287,8 @@ Table 2 reports latency measurements from the reference implementation running l
 
 | Operation | Extent | Latency |
 |---|---|---|
-| `/generate` (dekadal, 100-year, page=100) | 3,636 members | < 1 ms HTTP |
-| `/generate` (dekadal, page at offset 1800) | mid-range page | < 1 ms HTTP |
+| `/members` (dekadal, 100-year, page=100) | 3,636 members | < 1 ms HTTP |
+| `/members` (dekadal, page at offset 1800) | mid-range page | < 1 ms HTTP |
 | `/inverse` (single value) | — | 1.9 us/call |
 | `/inverse` batch (1,200 values) | — | 3.2 ms |
 | `/children` (tree, 13 children) | 54 nodes | < 1 ms HTTP |
@@ -320,16 +320,16 @@ Each dimension's `generator.type` is a distinct identifier (`dekadal`, `pentadal
 The 100-year extents are intentional: they produce member counts (3,636 to 7,373) that are impractical to embed in a collection JSON document, directly motivating the `size` + `href` pagination mechanism. With `limit=10`, a client retrieves only the first ten periods of any dimension and follows `rel:next` links to advance through the archive. The `numberMatched` field communicates total cardinality in the first response, enabling progress indicators and pre-allocation.
 
 ```
-GET /dimensions/temporal-dekadal/generate?limit=10
+GET /dimensions/temporal-dekadal/members?limit=10
 → {"numberMatched": 3636, "numberReturned": 10,
    "values": [{"code": "1950-K01", "start": "1950-01-01", "end": "1950-01-10"}, ...],
    "links": [{"rel": "next", "href": "...?limit=10&offset=10"}]}
 
-GET /dimensions/temporal-pentadal-monthly/generate?limit=10
+GET /dimensions/temporal-pentadal-monthly/members?limit=10
 → {"numberMatched": 7272, "numberReturned": 10,
    "values": [{"code": "1950-P01", "start": "1950-01-01", "end": "1950-01-05"}, ...]}
 
-GET /dimensions/temporal-pentadal-annual/generate?limit=10
+GET /dimensions/temporal-pentadal-annual/members?limit=10
 → {"numberMatched": 7373, "numberReturned": 10,
    "values": [{"code": "1950-A01", "start": "1950-01-01", "end": "1950-01-05"}, ...]}
 ```
@@ -345,7 +345,7 @@ The first period of both pentadal systems happens to coincide (1–5 January). T
 **Solution.** The `indicator-tree` dimension uses `StaticTreeGenerator` with a three-level recursive hierarchy: six thematic domains (Food Security, Production, Trade, Environment, Land Use, Employment) as roots; thematic groups as level-1 members with `parent_code` pointing to their domain; and specific indicators as level-2 leaves carrying measurement units. The dimension declares `hierarchy.strategy: "recursive"` with `parent_property: "parent_code"`.
 
 ```
-GET /dimensions/indicator-tree/generate
+GET /dimensions/indicator-tree/members
 → [FS, PROD, TRD, ENV, LND, EMP]   ← 6 root domains
 
 GET /dimensions/indicator-tree/children?parent=FS
@@ -363,19 +363,19 @@ The ancestor chain returned by `/ancestors` enables breadcrumb navigation in use
 
 **Gap.** The recursive strategy is adequate when each record carries an explicit `parent_code` field. However, many real-world administrative datasets are stored as flat tables with multiple columns (`iso_country`, `adm1_code`, `adm2_code`) rather than an adjacency list. In this case the hierarchy is imposed by level definitions, not encoded as a parent reference in the data itself. The leveled strategy addresses this pattern: each level is defined by the parameters that select its members from the underlying data store, without exposing the internal column structure to the client.
 
-**Solution.** The `admin-boundaries` dimension uses `LeveledTreeGenerator` with 67 nodes across three levels (5 continents at level 0, 33 countries at level 1, 29 sub-national regions for selected countries at level 2). It adds `?level=` parameter support to the `/generate` endpoint, enabling condition-based queries independent of tree navigation:
+**Solution.** The `admin-boundaries` dimension uses `LeveledTreeGenerator` with 67 nodes across three levels (5 continents at level 0, 33 countries at level 1, 29 sub-national regions for selected countries at level 2). It adds `?level=` parameter support to the `/members` endpoint, enabling condition-based queries independent of tree navigation:
 
 ```
-GET /dimensions/admin-boundaries/generate?level=0
+GET /dimensions/admin-boundaries/members?level=0
 → [AFR, AMR, ASI, EUR, OCE]   ← all 5 continents
 
-GET /dimensions/admin-boundaries/generate?level=1
+GET /dimensions/admin-boundaries/members?level=1
 → 33 countries   ← all countries, regardless of continent
 
-GET /dimensions/admin-boundaries/generate?level=1&parent=EUR
+GET /dimensions/admin-boundaries/members?level=1&parent=EUR
 → [DEU, ESP, FRA, GBR, ITA, POL, ROU]   ← European countries only
 
-GET /dimensions/admin-boundaries/generate?level=2&parent=ITA
+GET /dimensions/admin-boundaries/members?level=2&parent=ITA
 → [ITA-LOM, ITA-LAZ, ITA-CAM, ITA-SIC, ITA-VEN, ITA-PIE, ITA-EMR, ITA-TOS]
 
 GET /dimensions/admin-boundaries/ancestors?member=ITA-LOM

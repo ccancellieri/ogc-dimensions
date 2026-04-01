@@ -2,7 +2,7 @@
 
 FastAPI application demonstrating the generator specification:
   /dimensions                              -- list registered dimensions
-  /dimensions/{dimension_id}/generate      -- paginated member generation
+  /dimensions/{dimension_id}/members      -- paginated member generation
   /dimensions/{dimension_id}/extent        -- dimension boundaries
   /dimensions/{dimension_id}/inverse       -- value-to-coordinate mapping
   /dimensions/{dimension_id}/search        -- find members by query

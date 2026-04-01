@@ -46,7 +46,7 @@ ogc-dimensions/
 │       │   └── integer_range.py  # Integer range generator
 │       ├── api/              # FastAPI application
 │       │   ├── app.py        # API entry point
-│       │   └── routes.py     # /generate, /extent, /inverse, /search
+│       │   └── routes.py     # /members, /extent, /inverse, /search
 │       └── data/             # Sample datasets
 ├── docs/                     # GitHub Pages documentation
 ├── CHANGELOG.md
@@ -77,13 +77,13 @@ Then explore:
 curl "http://localhost:8000/dimensions"
 
 # Generate dekadal members for 2024
-curl "http://localhost:8000/dimensions/dekadal/generate?limit=36"
+curl "http://localhost:8000/dimensions/dekadal/members?limit=36"
 
 # Generate pentadal-monthly members (72/year, CHIRPS/FAO)
-curl "http://localhost:8000/dimensions/pentadal-monthly/generate?limit=12"
+curl "http://localhost:8000/dimensions/pentadal-monthly/members?limit=12"
 
 # Generate pentadal-annual members (73/year, GPCP/NOAA)
-curl "http://localhost:8000/dimensions/pentadal-annual/generate?limit=10"
+curl "http://localhost:8000/dimensions/pentadal-annual/members?limit=10"
 
 # Inverse: what dekad does January 15 belong to?
 curl "http://localhost:8000/dimensions/dekadal/inverse?value=2024-01-15"
@@ -104,16 +104,16 @@ A dekadal dimension has 36 members per year. With `limit=5`, a client paginates 
 
 ```bash
 # Page 1: first 5 dekads of 2024
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5"
 # → numberMatched: 36, numberReturned: 5
 # → links: [self, next → offset=5]
 
 # Page 2: follow the "next" link
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=5"
 # → links: [self, next → offset=10, prev → offset=0]
 
 # Last page: offset=35
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5&offset=35"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=35"
 # → numberReturned: 1, links: [self, prev → offset=30]
 ```
 
@@ -124,13 +124,13 @@ curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/gen
 curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/"
 
 # Pentadal-monthly (72/year, CHIRPS/FAO)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/generate?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/members?limit=5"
 
 # Pentadal-annual (73/year, GPCP/NOAA)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/generate?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/members?limit=5"
 
 # Integer range (elevation bands, step=100m)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/generate?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/members?limit=5"
 ```
 
 ### Bijective inversion
@@ -169,7 +169,7 @@ The `href` property in a STAC collection points directly to the generator's pagi
       "type": "temporal",
       "generator": { "type": "dekadal", "invertible": true },
       "size": 900,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/generate?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5"
     }
   }
 }
@@ -183,7 +183,7 @@ The reference implementation is deployed as a [Dynastore](https://github.com/un-
 
 | Level | Capabilities | Requirement |
 |---|---|---|
-| **Basic** | `/generate` + `/extent` | All generators MUST support |
+| **Basic** | `/members` + `/extent` | All generators MUST support |
 | **Invertible** | + `/inverse` | Enables ingestion validation |
 | **Searchable** | + `/search` (exact, range, like) | SHOULD support |
 | **Similarity** | + `/search` (vector) | MAY support (AI/ML) |

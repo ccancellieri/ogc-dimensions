@@ -11,7 +11,7 @@ Initial release.
 
 ### Testbed
 - Reference implementation: DekadalGenerator, PentadalMonthlyGenerator, PentadalAnnualGenerator, IntegerRangeGenerator
-- FastAPI API with /generate, /extent, /inverse, /search endpoints
+- FastAPI API with /members, /extent, /inverse, /search endpoints
 - Docker support
 
 ### Paper
