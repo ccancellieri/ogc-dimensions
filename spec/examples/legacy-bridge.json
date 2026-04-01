@@ -1,48 +1,25 @@
 {
-  "_comment": "Legacy client compatibility: dekadal dimension producing standard ISO dates. Legacy clients hit href and see a valid irregular temporal dimension without knowing about dekads. The format=datetime parameter ensures ISO output.",
-
   "type": "Collection",
   "id": "chirps-dekadal-legacy",
   "title": "CHIRPS Dekadal (legacy-compatible view)",
   "cube:dimensions": {
     "time": {
       "type": "temporal",
-      "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+      "extent": [
+        "2000-01-01T00:00:00Z",
+        "2024-12-31T23:59:59Z"
+      ],
       "generator": {
         "type": "dekadal",
-        "output": {"type": "string", "format": "date"},
+        "output": {
+          "type": "string",
+          "format": "date"
+        },
         "invertible": true
       },
       "step": null,
       "size": 900,
       "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&format=datetime"
     }
-  },
-
-  "_href_response_page1": {
-    "_note": "What a legacy client sees when it follows href. Standard ISO dates, standard pagination. No dekadal knowledge required.",
-    "dimension": "dekadal",
-    "generator": "dekadal",
-    "numberMatched": 36,
-    "numberReturned": 5,
-    "values": [
-      "2024-01-01",
-      "2024-01-11",
-      "2024-01-21",
-      "2024-02-01",
-      "2024-02-11"
-    ],
-    "links": [
-      {
-        "rel": "self",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=0",
-        "type": "application/json"
-      },
-      {
-        "rel": "next",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=5",
-        "type": "application/json"
-      }
-    ]
   }
 }

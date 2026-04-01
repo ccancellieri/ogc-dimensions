@@ -4,13 +4,32 @@
   "title": "CHIRPS Dekadal Precipitation",
   "description": "Climate Hazards Group InfraRed Precipitation with Station data, aggregated to dekadal (10-day) periods.",
   "extent": {
-    "spatial": {"bbox": [[-180, -50, 180, 50]]},
-    "temporal": {"interval": [["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
+    "spatial": {
+      "bbox": [
+        [
+          -180,
+          -50,
+          180,
+          50
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2000-01-01T00:00:00Z",
+          "2024-12-31T23:59:59Z"
+        ]
+      ]
+    }
   },
   "cube:dimensions": {
     "time": {
       "type": "temporal",
-      "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+      "extent": [
+        "2000-01-01T00:00:00Z",
+        "2024-12-31T23:59:59Z"
+      ],
       "generator": {
         "type": "dekadal",
         "api": "http://www.opengis.net/def/generator/ogc/0/dekadal/openapi.json",
@@ -18,15 +37,36 @@
         "output": {
           "type": "object",
           "properties": {
-            "code": {"type": "string", "description": "YYYY-Knn (nn=01..36)"},
-            "start": {"type": "string", "format": "date"},
-            "end": {"type": "string", "format": "date"},
-            "days": {"type": "integer", "minimum": 8, "maximum": 11}
+            "code": {
+              "type": "string",
+              "description": "YYYY-Knn (nn=01..36)"
+            },
+            "start": {
+              "type": "string",
+              "format": "date"
+            },
+            "end": {
+              "type": "string",
+              "format": "date"
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 8,
+              "maximum": 11
+            }
           },
-          "required": ["code", "start", "end"]
+          "required": [
+            "code",
+            "start",
+            "end"
+          ]
         },
         "invertible": true,
-        "search": ["exact", "range", "like"],
+        "search": [
+          "exact",
+          "range",
+          "like"
+        ],
         "on_invalid": "reject"
       },
       "step": null,
@@ -37,21 +77,31 @@
     "x": {
       "type": "spatial",
       "axis": "x",
-      "extent": [-180, 180],
+      "extent": [
+        -180,
+        180
+      ],
       "reference_system": 4326,
       "step": 0.05
     },
     "y": {
       "type": "spatial",
       "axis": "y",
-      "extent": [-50, 50],
+      "extent": [
+        -50,
+        50
+      ],
       "reference_system": 4326,
       "step": 0.05
     }
   },
   "cube:variables": {
     "precipitation": {
-      "dimensions": ["time", "y", "x"],
+      "dimensions": [
+        "time",
+        "y",
+        "x"
+      ],
       "type": "data",
       "unit": "mm"
     }
@@ -60,20 +110,15 @@
     "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
   ],
   "links": [
-    {"rel": "self", "href": "#", "type": "application/json"},
-    {"rel": "root", "href": "#", "type": "application/json"}
-  ],
-
-  "_commentary": {
-    "href_note": "The href points to the live reference implementation. Clients follow rel:next links to paginate through all 900 dekadal members. The limit=5 default produces 180 pages, making the pagination mechanics visible.",
-    "live_endpoints": {
-      "list_dimensions": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/",
-      "generate_page_1": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=0",
-      "generate_page_2": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=5",
-      "extent": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/extent",
-      "inverse": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15",
-      "search": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K*",
-      "swagger_ui": "https://data.review.fao.org/geospatial/v2/api/tools/docs"
+    {
+      "rel": "self",
+      "href": "#",
+      "type": "application/json"
+    },
+    {
+      "rel": "root",
+      "href": "#",
+      "type": "application/json"
     }
-  }
+  ]
 }
