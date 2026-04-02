@@ -177,7 +177,7 @@ The `href` property in a STAC collection points directly to the generator's pagi
 
 Legacy clients follow `href` and see standard paginated JSON. Generator-aware clients read the `generator` object and use `/inverse`, `/search`, and format negotiation (`?format=datetime` vs `?format=native`).
 
-The reference implementation is deployed as a [Dynastore](https://github.com/un-fao/dynastore) extension on Google Cloud Run. The `ogc-dimensions` package is installed as a pip dependency and mounted via the Dynastore extension protocol -- no code duplication.
+The reference implementation is deployed on the FAO Agro-Informatics Platform (Google Cloud Run) as a pip-installable FastAPI extension. The `ogc-dimensions` package is mounted alongside the production STAC catalog services with no code duplication.
 
 ## Conformance Levels
 
