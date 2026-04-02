@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-member/schema.json",
+  "title": "Dimension Member Record",
+  "description": "A GeoJSON Feature (geometry: null) representing a single dimension member, conforming to OGC API - Records record-core.",
+  "type": "object",
+  "required": ["type", "id", "properties"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "Feature"
+    },
+    "id": {
+      "type": "string",
+      "description": "Member code (e.g. '2024-D01', 'AF', 'band_50')."
+    },
+    "geometry": {
+      "description": "Always null for non-spatial dimension members.",
+      "type": "null"
+    },
+    "properties": {
+      "type": "object",
+      "required": ["dimension:type", "dimension:code", "dimension:index"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Human-readable label for this member."
+        },
+        "type": {
+          "type": "string",
+          "const": "dimension-member",
+          "description": "Record type discriminator."
+        },
+        "time": {
+          "type": "object",
+          "description": "Temporal information (OGC Records time object).",
+          "properties": {
+            "interval": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "oneOf": [
+                  {"type": "string"},
+                  {"type": "null"}
+                ]
+              }
+            }
+          }
+        },
+        "keywords": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Tags or categories for this member."
+        },
+        "labels": {
+          "type": "object",
+          "description": "Multilingual labels keyed by language code.",
+          "additionalProperties": {"type": "string"}
+        },
+        "dimension:type": {
+          "type": "string",
+          "description": "Dimension type: temporal, nominal, ordinal, spatial, bands.",
+          "enum": ["temporal", "nominal", "ordinal", "spatial", "bands", "other"]
+        },
+        "dimension:code": {
+          "type": "string",
+          "description": "Member code, identical to the Feature id."
+        },
+        "dimension:index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based ordinal position within the dimension."
+        },
+        "dimension:start": {
+          "description": "Start of the member's value range.",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "number"}
+          ]
+        },
+        "dimension:end": {
+          "description": "End of the member's value range.",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "number"}
+          ]
+        },
+        "dimension:parent": {
+          "type": "string",
+          "description": "Parent member code (hierarchical dimensions only)."
+        },
+        "dimension:level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Depth in the hierarchy tree (0 = root)."
+        },
+        "dimension:has_children": {
+          "type": "boolean",
+          "description": "Whether this member has child members."
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["href", "rel"],
+        "properties": {
+          "href": {"type": "string", "format": "uri-reference"},
+          "rel": {"type": "string"},
+          "type": {"type": "string"},
+          "title": {"type": "string"}
+        }
+      }
+    }
+  }
+}

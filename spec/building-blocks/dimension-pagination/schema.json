@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-pagination/schema.json",
+  "title": "Dimension Pagination Response",
+  "description": "OGC Common Part 2 paginated response for dimension members served as Records.",
+  "type": "object",
+  "required": ["type", "features"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "FeatureCollection"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "$ref": "../dimension-member/schema.json"
+      }
+    },
+    "numberMatched": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of dimension members matching the query within the dimension's extent."
+    },
+    "numberReturned": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of members in this response page."
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["href", "rel"],
+        "properties": {
+          "href": {"type": "string", "format": "uri-reference"},
+          "rel": {
+            "type": "string",
+            "enum": ["self", "next", "prev", "collection"]
+          },
+          "type": {"type": "string"},
+          "title": {"type": "string"}
+        }
+      }
+    }
+  }
+}

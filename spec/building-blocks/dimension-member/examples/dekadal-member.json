@@ -1,0 +1,22 @@
+{
+  "type": "Feature",
+  "id": "2024-D01",
+  "geometry": null,
+  "properties": {
+    "title": "2024 Dekad 01 (Jan 1-10)",
+    "type": "dimension-member",
+    "time": {
+      "interval": ["2024-01-01", "2024-01-10"]
+    },
+    "keywords": ["temporal", "dekadal"],
+    "dimension:type": "temporal",
+    "dimension:code": "2024-D01",
+    "dimension:index": 0,
+    "dimension:start": "2024-01-01",
+    "dimension:end": "2024-01-10"
+  },
+  "links": [
+    {"href": "/collections/temporal-dekadal/items/2024-D01", "rel": "self", "type": "application/geo+json"},
+    {"href": "/collections/temporal-dekadal", "rel": "collection", "type": "application/json"}
+  ]
+}

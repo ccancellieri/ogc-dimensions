@@ -1,0 +1,27 @@
+{
+  "type": "Feature",
+  "id": "KE",
+  "geometry": null,
+  "properties": {
+    "title": "Kenya",
+    "type": "dimension-member",
+    "keywords": ["nominal", "admin-boundaries"],
+    "labels": {
+      "en": "Kenya",
+      "fr": "Kenya",
+      "es": "Kenia"
+    },
+    "dimension:type": "nominal",
+    "dimension:code": "KE",
+    "dimension:index": 5,
+    "dimension:parent": "AF",
+    "dimension:level": 1,
+    "dimension:has_children": true
+  },
+  "links": [
+    {"href": "/collections/admin-boundaries/items/KE", "rel": "self", "type": "application/geo+json"},
+    {"href": "/collections/admin-boundaries/items/AF", "rel": "parent", "type": "application/geo+json", "title": "Africa"},
+    {"href": "/collections/admin-boundaries/items?parent=KE", "rel": "children", "type": "application/geo+json", "title": "Regions of Kenya"},
+    {"href": "/collections/admin-boundaries", "rel": "collection", "type": "application/json"}
+  ]
+}

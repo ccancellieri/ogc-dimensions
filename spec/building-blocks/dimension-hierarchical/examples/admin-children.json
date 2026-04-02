@@ -1,0 +1,70 @@
+{
+  "type": "FeatureCollection",
+  "numberMatched": 3,
+  "numberReturned": 3,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "KE",
+      "geometry": null,
+      "properties": {
+        "title": "Kenya",
+        "type": "dimension-member",
+        "dimension:type": "nominal",
+        "dimension:code": "KE",
+        "dimension:index": 0,
+        "dimension:parent": "AF",
+        "dimension:level": 1,
+        "dimension:has_children": true
+      },
+      "links": [
+        {"href": "/collections/admin-boundaries/items/KE", "rel": "self"},
+        {"href": "/collections/admin-boundaries/items/AF", "rel": "parent", "title": "Africa"},
+        {"href": "/collections/admin-boundaries/items?parent=KE", "rel": "children"}
+      ]
+    },
+    {
+      "type": "Feature",
+      "id": "NG",
+      "geometry": null,
+      "properties": {
+        "title": "Nigeria",
+        "type": "dimension-member",
+        "dimension:type": "nominal",
+        "dimension:code": "NG",
+        "dimension:index": 1,
+        "dimension:parent": "AF",
+        "dimension:level": 1,
+        "dimension:has_children": true
+      },
+      "links": [
+        {"href": "/collections/admin-boundaries/items/NG", "rel": "self"},
+        {"href": "/collections/admin-boundaries/items/AF", "rel": "parent", "title": "Africa"},
+        {"href": "/collections/admin-boundaries/items?parent=NG", "rel": "children"}
+      ]
+    },
+    {
+      "type": "Feature",
+      "id": "ZA",
+      "geometry": null,
+      "properties": {
+        "title": "South Africa",
+        "type": "dimension-member",
+        "dimension:type": "nominal",
+        "dimension:code": "ZA",
+        "dimension:index": 2,
+        "dimension:parent": "AF",
+        "dimension:level": 1,
+        "dimension:has_children": false
+      },
+      "links": [
+        {"href": "/collections/admin-boundaries/items/ZA", "rel": "self"},
+        {"href": "/collections/admin-boundaries/items/AF", "rel": "parent", "title": "Africa"}
+      ]
+    }
+  ],
+  "links": [
+    {"href": "/collections/admin-boundaries/items?parent=AF", "rel": "self", "type": "application/geo+json"},
+    {"href": "/collections/admin-boundaries", "rel": "collection", "type": "application/json"}
+  ]
+}

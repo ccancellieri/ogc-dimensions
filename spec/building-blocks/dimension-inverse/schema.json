@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-inverse/schema.json",
+  "title": "Dimension Inverse Response",
+  "description": "Response from the /inverse endpoint: the dimension member Record that contains the queried value.",
+  "oneOf": [
+    {
+      "$ref": "../dimension-member/schema.json"
+    },
+    {
+      "type": "object",
+      "description": "Error response when value is outside the dimension extent.",
+      "required": ["code", "description"],
+      "properties": {
+        "code": {"type": "string"},
+        "description": {"type": "string"}
+      }
+    }
+  ]
+}
