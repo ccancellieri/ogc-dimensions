@@ -1,0 +1,101 @@
+{
+  "$schema": "https://opengeospatial.github.io/bblocks-postprocess/ogc/bblocks/metadata-schema.yaml",
+  "name": "OGC API - Dimensions Building Blocks",
+  "abstract": "OGC API - Dimensions is a profile of OGC API - Records that defines how datacube dimension metadata and members are represented as Record collections and Records, respectively. It is packaged as five OGC Building Blocks that can be adopted independently.",
+  "status": "under-development",
+  "dateOfLastChange": "2026-04-02",
+  "sources": [
+    {
+      "title": "OGC API - Records - Part 1: Core (OGC 20-004)",
+      "link": "https://docs.ogc.org/is/20-004/20-004.html"
+    },
+    {
+      "title": "STAC Datacube Extension",
+      "link": "https://github.com/stac-extensions/datacube"
+    }
+  ],
+  "scope": "ogc-dimensions",
+  "group": "OGC API",
+  "bblocks": [
+    {
+      "itemIdentifier": "ogc.api.dimensions.dimension-collection",
+      "name": "Dimension Collection",
+      "status": "under-development",
+      "dateOfLastChange": "2026-04-02",
+      "sources": [],
+      "maturity": "proposal",
+      "scope": "ogc-dimensions",
+      "group": "OGC API - Dimensions",
+      "shaclRules": [],
+      "dependsOn": [
+        "ogc.api.records.core"
+      ],
+      "tags": ["dimensions", "records", "datacube", "collection"],
+      "abstract": "A Records catalogue whose items are dimension members. Extends collection metadata with a generator object (from STAC Datacube Extension) that drives algorithmic member production."
+    },
+    {
+      "itemIdentifier": "ogc.api.dimensions.dimension-member",
+      "name": "Dimension Member",
+      "status": "under-development",
+      "dateOfLastChange": "2026-04-02",
+      "sources": [],
+      "maturity": "proposal",
+      "scope": "ogc-dimensions",
+      "group": "OGC API - Dimensions",
+      "shaclRules": [],
+      "dependsOn": [
+        "ogc.api.records.record-core"
+      ],
+      "tags": ["dimensions", "records", "member", "datacube"],
+      "abstract": "A Record representing a single dimension member with time.interval, multilingual labels, and dimension-specific properties (code, index, type)."
+    },
+    {
+      "itemIdentifier": "ogc.api.dimensions.dimension-pagination",
+      "name": "Dimension Pagination",
+      "status": "under-development",
+      "dateOfLastChange": "2026-04-02",
+      "sources": [],
+      "maturity": "proposal",
+      "scope": "ogc-dimensions",
+      "group": "OGC API - Dimensions",
+      "shaclRules": [],
+      "dependsOn": [
+        "ogc.api.common.part2"
+      ],
+      "tags": ["dimensions", "pagination", "ogc-common"],
+      "abstract": "OGC Common Part 2 pagination profile for dimension members. numberMatched reflects total members in the extent; offset/limit traverse the generated sequence."
+    },
+    {
+      "itemIdentifier": "ogc.api.dimensions.dimension-inverse",
+      "name": "Dimension Inverse",
+      "status": "under-development",
+      "dateOfLastChange": "2026-04-02",
+      "sources": [],
+      "maturity": "proposal",
+      "scope": "ogc-dimensions",
+      "group": "OGC API - Dimensions",
+      "shaclRules": [],
+      "dependsOn": [
+        "ogc.api.dimensions.dimension-collection"
+      ],
+      "tags": ["dimensions", "inverse", "validation"],
+      "abstract": "Defines the /inverse endpoint: given a raw value, return the dimension member it belongs to. Enables ingestion-time coordinate validation."
+    },
+    {
+      "itemIdentifier": "ogc.api.dimensions.dimension-hierarchical",
+      "name": "Dimension Hierarchical",
+      "status": "under-development",
+      "dateOfLastChange": "2026-04-02",
+      "sources": [],
+      "maturity": "proposal",
+      "scope": "ogc-dimensions",
+      "group": "OGC API - Dimensions",
+      "shaclRules": [],
+      "dependsOn": [
+        "ogc.api.dimensions.dimension-member"
+      ],
+      "tags": ["dimensions", "hierarchy", "navigation"],
+      "abstract": "Defines /children and /ancestors endpoints and the ?parent= filter for hierarchical dimension navigation. Supports both leveled (fixed-depth) and recursive (arbitrary-depth) tree structures."
+    }
+  ]
+}

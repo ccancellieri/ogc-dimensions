@@ -1,0 +1,31 @@
+{
+  "id": "temporal-dekadal",
+  "title": "Dekadal Temporal Dimension",
+  "description": "10-day periods, 36 per year, month-aligned (D1=1-10, D2=11-20, D3=remainder).",
+  "itemType": "record",
+  "extent": {
+    "temporal": {
+      "interval": [["1950-01-01T00:00:00Z", "2050-12-31T00:00:00Z"]]
+    }
+  },
+  "cube:dimensions": {
+    "time": {
+      "type": "temporal",
+      "extent": ["1950-01-01", "2050-12-31"],
+      "size": 3636,
+      "step": null,
+      "href": "/collections/temporal-dekadal/items",
+      "generator": {
+        "type": "daily-period",
+        "parameters": {
+          "period_days": 10,
+          "scheme": "monthly"
+        }
+      }
+    }
+  },
+  "links": [
+    {"href": "/collections/temporal-dekadal", "rel": "self", "type": "application/json"},
+    {"href": "/collections/temporal-dekadal/items", "rel": "items", "type": "application/geo+json"}
+  ]
+}

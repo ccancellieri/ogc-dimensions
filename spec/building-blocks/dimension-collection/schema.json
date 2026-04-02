@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-collection/schema.json",
+  "title": "Dimension Collection",
+  "description": "A Records collection whose items are dimension members. Extends OGC API - Records collection with cube:dimensions property.",
+  "type": "object",
+  "required": ["id", "itemType"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Dimension collection identifier."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable name for the dimension."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the dimension."
+    },
+    "itemType": {
+      "type": "string",
+      "const": "record",
+      "description": "Item type is always 'record' for dimension collections."
+    },
+    "extent": {
+      "type": "object",
+      "description": "Temporal or value extent of the dimension.",
+      "properties": {
+        "temporal": {
+          "type": "object",
+          "properties": {
+            "interval": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "oneOf": [
+                    {"type": "string", "format": "date-time"},
+                    {"type": "string", "format": "date"},
+                    {"type": "null"}
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cube:dimensions": {
+      "type": "object",
+      "description": "Datacube dimension definitions (STAC Datacube Extension + ogc-dimensions extensions).",
+      "additionalProperties": {
+        "$ref": "../../schema/dimension.json"
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["href", "rel"],
+        "properties": {
+          "href": {"type": "string", "format": "uri-reference"},
+          "rel": {"type": "string"},
+          "type": {"type": "string"},
+          "title": {"type": "string"}
+        }
+      }
+    }
+  }
+}

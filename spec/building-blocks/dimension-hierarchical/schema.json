@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-hierarchical/schema.json",
+  "title": "Dimension Hierarchical Member",
+  "description": "A dimension member Record with hierarchical navigation properties and links.",
+  "allOf": [
+    {"$ref": "../dimension-member/schema.json"},
+    {
+      "type": "object",
+      "properties": {
+        "properties": {
+          "type": "object",
+          "properties": {
+            "dimension:parent": {
+              "type": "string",
+              "description": "Parent member code. Null or absent for root members."
+            },
+            "dimension:level": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Depth in the hierarchy (0 = root, 1 = first child level, etc.)."
+            },
+            "dimension:has_children": {
+              "type": "boolean",
+              "description": "Whether this member has child members below it."
+            }
+          },
+          "required": ["dimension:level"]
+        },
+        "links": {
+          "type": "array",
+          "description": "Navigation links including parent and children relations.",
+          "items": {
+            "type": "object",
+            "required": ["href", "rel"],
+            "properties": {
+              "href": {"type": "string", "format": "uri-reference"},
+              "rel": {
+                "type": "string",
+                "description": "Link relation. Hierarchical members use 'parent', 'children', 'ancestors'."
+              },
+              "type": {"type": "string"},
+              "title": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  ]
+}
