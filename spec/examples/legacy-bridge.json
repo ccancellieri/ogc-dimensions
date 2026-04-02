@@ -10,7 +10,11 @@
         "2024-12-31T23:59:59Z"
       ],
       "generator": {
-        "type": "dekadal",
+        "type": "daily-period",
+        "config": {
+          "period_days": 10,
+          "scheme": "monthly"
+        },
         "output": {
           "type": "string",
           "format": "date"

@@ -8,19 +8,24 @@
   "properties": {
     "type": {
       "type": "string",
-      "description": "Generator type identifier. Short identifiers name well-known algorithms maintained by the OGC Naming Authority; full URIs identify custom generators whose OpenAPI definition is given in the 'api' field. Well-known types include 'dekadal' (FAO 10-day calendar, 36/year), 'pentadal-monthly' (month-aligned 5-day, 72/year), 'pentadal-annual' (year-aligned 5-day, 73/year), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), and 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). This list is extensible: implementations MAY register additional well-known types through the OGC Naming Authority, and custom generators use a full URI as the type value."
+      "description": "Generator type identifier. Short identifiers name well-known algorithms maintained by the OGC Naming Authority; full URIs identify custom generators whose OpenAPI definition is given in the 'api' field. Well-known types: 'daily-period' (sub-monthly temporal periods configured by config.period_days and config.scheme — covers dekadal, pentadal, and any fixed-length day period), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). This list is extensible: implementations MAY register additional well-known types through the OGC Naming Authority, and custom generators use a full URI as the type value."
     },
     "api": {
       "type": "string",
       "format": "uri",
       "description": "OpenAPI definition URI. REQUIRED when type is a full URI (custom generator). For well-known types the API definition is implicit (resolvable from the registered OGC Definition URI). Machine clients fetch this to discover all available endpoints and parameters."
     },
+    "config": {
+      "type": "object",
+      "description": "Author-set configuration values for this generator instance. These are static constants fixed at collection-authoring time and cannot be overridden by API clients per-request. They configure the generator algorithm itself — for example, the bin width of an integer-range generator or the base temperature of a growing-degree-day generator. For well-known generator types the set of recognised properties is defined by the OGC Definition URI for that type; for custom generators it is defined in the 'api' OpenAPI document. Well-known generators with no author-configurable constants (e.g. dekadal, pentadal) SHOULD omit this field or set it to {}. Clients that fetch the /dimensions list or /queryables endpoint will find these values in the response under 'config', enabling them to understand the exact parameterisation in use without reading server source code.",
+      "additionalProperties": true
+    },
     "parameters": {
-      "description": "Default input parameters for the algorithm, defined per JSON Schema 2020-12. Maps to the OpenAPI request schema. For hierarchical generators using a leveled strategy, individual hierarchy levels override these defaults via their own parameters object.",
+      "description": "JSON Schema 2020-12 document describing the query-time parameters that clients may pass per request to /members, /children, and /search. These are NOT static configuration values — use the 'config' field for author-set constants. For hierarchical generators using a leveled strategy, individual hierarchy levels may supply their own parameters object containing the actual filter values (e.g. {\"level\": 0}) used to select members at that level — these are parameter instances, not schemas. Standard cross-generator parameters (SHOULD be declared here when the corresponding capability is present): 'language' (string, RFC 5646 Language-Tag — selects label language and sort collation; overrides Accept-Language header); 'sort_by' (string, output field name to sort members by, e.g. 'label', 'code', 'rank'; default is generator-defined); 'sort_dir' (string enum 'asc'|'desc', default 'asc'; used with sort_by).",
       "$ref": "https://json-schema.org/draft/2020-12/schema"
     },
     "output": {
-      "description": "Type and structure of each generated member, defined per JSON Schema 2020-12. For recursive hierarchical generators, the output object SHOULD include the field named in hierarchy.parent_property, typed as string or null (null for root members).",
+      "description": "Type and structure of each generated member, defined per JSON Schema 2020-12. For recursive hierarchical generators, the output object SHOULD include the field named in hierarchy.parent_property, typed as string or null (null for root members). Well-known optional output fields: 'label' (string, human-readable name in the default language), 'labels' (object, multilingual names keyed by RFC 5646 language tag — e.g. {\"en\": \"France\", \"fr\": \"France\", \"ar\": \"فرنسا\"} — when present, clients SHOULD use labels[negotiated_lang] over label), 'rank' (integer, explicit sort position for ordinal dimensions; 0-based), 'has_children' (boolean, true if this member has at least one child; saves a /children round-trip for tree rendering).",
       "$ref": "https://json-schema.org/draft/2020-12/schema"
     },
     "invertible": {
@@ -48,10 +53,33 @@
       "default": false,
       "description": "true if the generator supports Hierarchical conformance level: /children, /ancestors, and the optional ?parent= filter on /members. SHOULD be true when the dimension declares a hierarchy property. The generator's /children endpoint follows the same pagination contract as /members and mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members rather than collections."
     },
-    "navigable": {
-      "type": "boolean",
-      "default": false,
-      "description": "true if the generator supports per-member navigation links (children, ancestors) when the client requests them via ?links=true. Requires hierarchical:true. When navigable is true and a client passes ?links=true, each member object in the response MAY include a 'links' array with rel:children (present only for non-leaf members) and rel:ancestors entries. By default (?links=false or omitted), member-level links are suppressed to minimize response size. Response-level pagination links (self, next, prev) are always included regardless of this setting."
+    "language_support": {
+      "type": "array",
+      "description": "Languages the generator can serve member labels in. Each entry is a Language Object aligned with the STAC Language Extension (https://stac-extensions.github.io/language/v1.0.0/schema.json) and OGC API - Records. When present, clients MAY request a specific language via the 'language' query parameter (RFC 5646 Language-Tag, same format as Accept-Language) or the Accept-Language HTTP header. The generator SHOULD return the 'label' field in the negotiated language and SHOULD include a 'labels' map on each member with all available translations. Sort operations on 'label' use locale-aware collation for the negotiated language.",
+      "items": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "RFC 5646 Language-Tag for this language (e.g. 'en', 'fr', 'ar', 'zh-Hans')."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the language in the language itself (e.g. 'Deutsch' for German). MUST NOT be translated."
+          },
+          "alternate": {
+            "type": "string",
+            "description": "Name of the language in another well-understood language, usually English (e.g. 'German' for German)."
+          },
+          "dir": {
+            "type": "string",
+            "enum": ["ltr", "rtl"],
+            "default": "ltr",
+            "description": "Text direction for this language. 'ltr' (left-to-right) or 'rtl' (right-to-left). Clients rendering member labels SHOULD apply this direction. Defaults to 'ltr'."
+          }
+        }
+      }
     }
   },
   "if": {
