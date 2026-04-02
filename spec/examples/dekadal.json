@@ -5,68 +5,55 @@
   "description": "Climate Hazards Group InfraRed Precipitation with Station data, aggregated to dekadal (10-day) periods.",
   "extent": {
     "spatial": {
-      "bbox": [
-        [
-          -180,
-          -50,
-          180,
-          50
-        ]
-      ]
+      "bbox": [[-180, -50, 180, 50]]
     },
     "temporal": {
-      "interval": [
-        [
-          "2000-01-01T00:00:00Z",
-          "2024-12-31T23:59:59Z"
-        ]
-      ]
+      "interval": [["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]
     }
   },
   "cube:dimensions": {
     "time": {
       "type": "temporal",
-      "extent": [
-        "2000-01-01T00:00:00Z",
-        "2024-12-31T23:59:59Z"
-      ],
+      "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
       "generator": {
-        "type": "dekadal",
-        "api": "http://www.opengis.net/def/generator/ogc/0/dekadal/openapi.json",
-        "parameters": {},
+        "type": "daily-period",
+        "config": {
+          "period_days": 10,
+          "scheme": "monthly"
+        },
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "sort_dir": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "asc",
+              "description": "Sort direction. 'asc' = oldest first (default), 'desc' = newest first."
+            }
+          }
+        },
         "output": {
           "type": "object",
+          "required": ["code", "start", "end"],
           "properties": {
             "code": {
               "type": "string",
-              "description": "YYYY-Knn (nn=01..36)"
+              "description": "YYYY-Knn (nn=01..36). 'K' prefix denotes dekadal (monthly scheme, 10-day period)."
             },
             "start": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "description": "First day of the period (inclusive)."
             },
             "end": {
               "type": "string",
-              "format": "date"
-            },
-            "days": {
-              "type": "integer",
-              "minimum": 8,
-              "maximum": 11
+              "format": "date",
+              "description": "Last day of the period (inclusive). D3 absorbs remaining days (21–end-of-month: 8–11 days)."
             }
-          },
-          "required": [
-            "code",
-            "start",
-            "end"
-          ]
+          }
         },
         "invertible": true,
-        "search": [
-          "exact",
-          "range",
-          "like"
-        ],
+        "search": ["exact", "range"],
         "on_invalid": "reject"
       },
       "step": null,
@@ -77,31 +64,21 @@
     "x": {
       "type": "spatial",
       "axis": "x",
-      "extent": [
-        -180,
-        180
-      ],
+      "extent": [-180, 180],
       "reference_system": 4326,
       "step": 0.05
     },
     "y": {
       "type": "spatial",
       "axis": "y",
-      "extent": [
-        -50,
-        50
-      ],
+      "extent": [-50, 50],
       "reference_system": 4326,
       "step": 0.05
     }
   },
   "cube:variables": {
     "precipitation": {
-      "dimensions": [
-        "time",
-        "y",
-        "x"
-      ],
+      "dimensions": ["time", "y", "x"],
       "type": "data",
       "unit": "mm"
     }
@@ -110,15 +87,7 @@
     "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
   ],
   "links": [
-    {
-      "rel": "self",
-      "href": "#",
-      "type": "application/json"
-    },
-    {
-      "rel": "root",
-      "href": "#",
-      "type": "application/json"
-    }
+    {"rel": "self", "href": "#", "type": "application/json"},
+    {"rel": "root", "href": "#", "type": "application/json"}
   ]
 }

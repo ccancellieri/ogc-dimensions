@@ -24,7 +24,14 @@
           },
           "label": {
             "type": "string",
-            "description": "Human-readable name for this level (e.g., 'Country', 'Region')."
+            "description": "Human-readable name for this level in the default language (e.g., 'Country', 'Region')."
+          },
+          "labels": {
+            "type": "object",
+            "description": "Human-readable names for this level in multiple languages. Keys are RFC 5646 Language-Tags (e.g. 'en', 'fr', 'ar'); values are the level name in that language. Complements the single-language 'label' field: when 'labels' is present, clients SHOULD prefer labels[negotiated_lang] over 'label'. The 'label' field remains REQUIRED as the default-language fallback.",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "size": {
             "type": "integer",

@@ -1,63 +1,93 @@
 {
   "type": "Collection",
   "id": "srtm-elevation-bands",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
+  ],
   "title": "SRTM Elevation Bands",
-  "description": "SRTM digital elevation model classified into 100m elevation bands.",
+  "description": "SRTM digital elevation model classified into 100 m elevation bands (0–5000 m). Demonstrates the Invertible conformance level: any raw elevation value maps deterministically to its enclosing band via /inverse.",
+  "license": "proprietary",
+  "extent": {
+    "spatial": {"bbox": [[-180, -60, 180, 60]]},
+    "temporal": {"interval": [["2000-02-11T00:00:00Z", "2000-02-22T23:59:59Z"]]}
+  },
+  "links": [
+    {"rel": "self", "href": "#", "type": "application/json"},
+    {"rel": "root", "href": "#", "type": "application/json"}
+  ],
   "cube:dimensions": {
+    "x": {
+      "type": "spatial", "axis": "x",
+      "extent": [-180, 180], "reference_system": 4326
+    },
+    "y": {
+      "type": "spatial", "axis": "y",
+      "extent": [-60, 60], "reference_system": 4326
+    },
     "elevation": {
       "type": "other",
-      "description": "Elevation bands (meters above sea level)",
-      "extent": [
-        0,
-        5000
-      ],
+      "description": "Elevation bands (metres above sea level). 100 m step from 0 to 5000 m produces 51 bands.",
+      "extent": [0, 5000],
+      "unit": "m",
+      "size": 51,
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands/members?limit=5",
       "generator": {
         "type": "integer-range",
+        "config": {
+          "step": 100
+        },
         "parameters": {
           "type": "object",
           "properties": {
-            "step": {
-              "type": "integer",
-              "const": 100
+            "sort_by": {
+              "type": "string",
+              "enum": ["code", "index"],
+              "description": "Output field to sort members by. 'code' sorts by numeric lower-bound string (default, ascending = lowest band first). 'index' sorts by sequential band index (same ordering as 'code' for ascending)."
+            },
+            "sort_dir": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "asc",
+              "description": "Sort direction. 'desc' returns bands from highest to lowest elevation."
             }
-          },
-          "required": [
-            "step"
-          ]
+          }
         },
         "output": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 5000
+          "type": "object",
+          "required": ["code", "index", "lower", "upper"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "String representation of the band's lower bound (e.g. '100' for the 100–199 m band). Used as the member identifier."
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Zero-based sequential index of this band within the extent (0 for the 0–99 m band, 1 for the 100–199 m band, etc.)."
+            },
+            "lower": {
+              "type": "integer",
+              "description": "Inclusive lower bound of the band in metres (equals lower bound of the containing step interval)."
+            },
+            "upper": {
+              "type": "integer",
+              "description": "Inclusive upper bound of the band in metres (lower + step - 1). For the last band this equals the dimension extent maximum."
+            }
+          }
         },
         "invertible": true,
-        "search": [
-          "exact",
-          "range"
-        ],
+        "search": ["exact", "range"],
         "on_invalid": "reject"
-      },
+      }
+    }
+  },
+  "cube:variables": {
+    "elevation": {
+      "dimensions": ["y", "x"],
+      "type": "data",
       "unit": "m",
-      "size": 51,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/members?limit=5"
-    },
-    "x": {
-      "type": "spatial",
-      "axis": "x",
-      "extent": [
-        -180,
-        180
-      ],
-      "reference_system": 4326
-    },
-    "y": {
-      "type": "spatial",
-      "axis": "y",
-      "extent": [
-        -60,
-        60
-      ],
-      "reference_system": 4326
+      "description": "Digital elevation model value in metres."
     }
   }
 }

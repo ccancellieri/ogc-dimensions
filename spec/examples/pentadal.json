@@ -1,101 +1,152 @@
-{
-  "pentadal_monthly_example": {
+[
+  {
     "type": "Collection",
     "id": "chirps-pentadal-precipitation",
-    "description": "Month-based pentadal (72 periods/year). Each month has 6 pentads of 5 days; P6 absorbs remaining days (26-end). Used by CHIRPS, CDT, FAO.",
+    "stac_version": "1.0.0",
+    "stac_extensions": [
+      "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
+    ],
+    "title": "CHIRPS Pentadal Precipitation (Monthly Alignment)",
+    "description": "Climate Hazards Group InfraRed Precipitation with Station data, aggregated to month-aligned pentadal (5-day) periods. 6 pentads per month (72/year); P6 absorbs remaining days (26\u2013end-of-month). Used by CHIRPS, CDT, FAO early warning systems.",
+    "license": "CC-BY-4.0",
+    "extent": {
+      "spatial": {"bbox": [[-180, -50, 180, 50]]},
+      "temporal": {"interval": [["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
+    },
+    "links": [
+      {"rel": "self", "href": "#", "type": "application/json"},
+      {"rel": "root", "href": "#", "type": "application/json"}
+    ],
     "cube:dimensions": {
+      "x": {
+        "type": "spatial", "axis": "x",
+        "extent": [-180, 180], "reference_system": 4326, "step": 0.05
+      },
+      "y": {
+        "type": "spatial", "axis": "y",
+        "extent": [-50, 50], "reference_system": 4326, "step": 0.05
+      },
       "time": {
         "type": "temporal",
-        "extent": [
-          "2000-01-01T00:00:00Z",
-          "2024-12-31T23:59:59Z"
-        ],
-        "generator": {
-          "type": "pentadal-monthly",
-          "output": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "YYYY-Pnn (nn=01..72)"
-              },
-              "start": {
-                "type": "string",
-                "format": "date"
-              },
-              "end": {
-                "type": "string",
-                "format": "date"
-              }
-            },
-            "required": [
-              "code",
-              "start",
-              "end"
-            ]
-          },
-          "invertible": true,
-          "search": [
-            "exact",
-            "range",
-            "like"
-          ],
-          "on_invalid": "reject"
-        },
+        "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
         "step": null,
         "unit": "pentad",
         "size": 1800,
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/members?limit=5"
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-monthly/members?limit=5",
+        "generator": {
+          "type": "daily-period",
+          "config": {
+            "period_days": 5,
+            "scheme": "monthly"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "sort_dir": {
+                "type": "string",
+                "enum": ["asc", "desc"],
+                "default": "asc",
+                "description": "Sort direction."
+              }
+            }
+          },
+          "output": {
+            "type": "object",
+            "required": ["code", "start", "end"],
+            "properties": {
+              "code":  {"type": "string",  "description": "YYYY-Pnn (nn=01..72). 'P' prefix denotes pentadal (monthly scheme, 5-day period)."},
+              "start": {"type": "string",  "format": "date", "description": "First day of the pentad (inclusive)."},
+              "end":   {"type": "string",  "format": "date", "description": "Last day of the pentad (inclusive). P6 absorbs remaining days (26\u2013end-of-month)."}
+            }
+          },
+          "invertible": true,
+          "search": ["exact", "range"],
+          "on_invalid": "reject"
+        }
+      }
+    },
+    "cube:variables": {
+      "precipitation": {
+        "dimensions": ["time", "y", "x"],
+        "type": "data",
+        "unit": "mm",
+        "description": "Accumulated precipitation over the pentad."
       }
     }
   },
-  "pentadal_annual_example": {
+  {
     "type": "Collection",
     "id": "gpcp-pentadal-precipitation",
-    "description": "Year-based pentadal (73 periods/year). Consecutive 5-day periods starting Jan 1. Period 73 has 5 or 6 days (leap year). Used by GPCP, CPC/NOAA.",
+    "stac_version": "1.0.0",
+    "stac_extensions": [
+      "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
+    ],
+    "title": "GPCP Pentadal Precipitation (Annual Alignment)",
+    "description": "Global Precipitation Climatology Project daily data merged to year-aligned pentadal (5-day) periods. 73 pentads per year, consecutive from Jan 1; period 73 covers Dec 27\u201331 (5 days) or Dec 26\u201331 in a leap year (6 days). Used by GPCP, CPC/NOAA. \u26a0 Interoperability note: pentad P12 in this system and pentad P12 in the monthly-aligned system refer to DIFFERENT calendar intervals.",
+    "license": "CC-BY-4.0",
+    "extent": {
+      "spatial": {"bbox": [[-180, -90, 180, 90]]},
+      "temporal": {"interval": [["1979-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
+    },
+    "links": [
+      {"rel": "self", "href": "#", "type": "application/json"},
+      {"rel": "root", "href": "#", "type": "application/json"}
+    ],
     "cube:dimensions": {
+      "x": {
+        "type": "spatial", "axis": "x",
+        "extent": [-180, 180], "reference_system": 4326, "step": 2.5
+      },
+      "y": {
+        "type": "spatial", "axis": "y",
+        "extent": [-90, 90], "reference_system": 4326, "step": 2.5
+      },
       "time": {
         "type": "temporal",
-        "extent": [
-          "2000-01-01T00:00:00Z",
-          "2024-12-31T23:59:59Z"
-        ],
-        "generator": {
-          "type": "pentadal-annual",
-          "output": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "YYYY-Ann (nn=01..73)"
-              },
-              "start": {
-                "type": "string",
-                "format": "date"
-              },
-              "end": {
-                "type": "string",
-                "format": "date"
-              }
-            },
-            "required": [
-              "code",
-              "start",
-              "end"
-            ]
-          },
-          "invertible": true,
-          "search": [
-            "exact",
-            "range",
-            "like"
-          ]
-        },
+        "extent": ["1979-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
         "step": null,
         "unit": "pentad",
-        "size": 1825,
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/members?limit=5"
+        "size": 3358,
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-annual/members?limit=5",
+        "generator": {
+          "type": "daily-period",
+          "config": {
+            "period_days": 5,
+            "scheme": "annual"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "sort_dir": {
+                "type": "string",
+                "enum": ["asc", "desc"],
+                "default": "asc",
+                "description": "Sort direction."
+              }
+            }
+          },
+          "output": {
+            "type": "object",
+            "required": ["code", "start", "end"],
+            "properties": {
+              "code":  {"type": "string",  "description": "YYYY-Ann (nn=01..73). 'A' prefix denotes annual scheme."},
+              "start": {"type": "string",  "format": "date", "description": "First day of the pentad (inclusive)."},
+              "end":   {"type": "string",  "format": "date", "description": "Last day of the pentad (inclusive). A73 absorbs remaining days (5 or 6 in leap year)."}
+            }
+          },
+          "invertible": true,
+          "search": ["exact", "range"],
+          "on_invalid": "reject"
+        }
+      }
+    },
+    "cube:variables": {
+      "precipitation": {
+        "dimensions": ["time", "y", "x"],
+        "type": "data",
+        "unit": "mm/day",
+        "description": "Mean precipitation rate over the pentad."
       }
     }
   }
-}
+]

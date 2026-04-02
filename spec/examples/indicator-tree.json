@@ -3,7 +3,15 @@
   "id": "faostat-food-security",
   "stac_version": "1.0.0",
   "stac_extensions": [
-    "https://stac-extensions.github.io/datacube/v2.3.0/schema.json"
+    "https://stac-extensions.github.io/datacube/v2.3.0/schema.json",
+    "https://stac-extensions.github.io/language/v1.0.0/schema.json"
+  ],
+  "language": {"code": "en", "name": "English"},
+  "languages": [
+    {"code": "fr", "name": "Français",  "alternate": "French"},
+    {"code": "ar", "name": "العربية",   "alternate": "Arabic", "dir": "rtl"},
+    {"code": "es", "name": "Español",   "alternate": "Spanish"},
+    {"code": "zh", "name": "中文",       "alternate": "Chinese"}
   ],
   "title": "FAO FAOSTAT Food Security Indicators",
   "description": "FAOSTAT Suite of Food Security Indicators — multi-dimensional data covering food availability, access, utilization, and stability across 195 countries.",
@@ -69,6 +77,7 @@
       "generator": {
         "type": "https://www.fao.org/faostat/generators/indicator/openapi.json",
         "api": "https://www.fao.org/faostat/generators/indicator/openapi.json",
+        "config": {},
         "parameters": {
           "type": "object",
           "properties": {
@@ -79,48 +88,77 @@
             "parent": {
               "type": "string",
               "description": "Return only direct children of this indicator code."
+            },
+            "language": {
+              "type": "string",
+              "description": "RFC 5646 Language-Tag selecting the label language and sort collation (e.g. 'fr', 'ar', 'zh'). Overrides Accept-Language header. Defaults to 'en'."
+            },
+            "sort_by": {
+              "type": "string",
+              "enum": ["code", "label"],
+              "description": "Field to sort members by. 'label' uses locale-aware collation for the negotiated language."
+            },
+            "sort_dir": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "asc",
+              "description": "Sort direction."
             }
           }
         },
         "output": {
           "type": "object",
+          "required": ["code", "label", "parent_code"],
           "properties": {
             "code": {
               "type": "string",
-              "description": "Indicator code (e.g., 'FI')"
+              "description": "Indicator code (e.g., 'FS-AVL-DES')."
             },
             "label": {
               "type": "string",
-              "description": "Indicator name"
+              "description": "Indicator name in the negotiated language (default: English)."
+            },
+            "labels": {
+              "type": "object",
+              "description": "Indicator name in all available languages. Keys are RFC 5646 Language-Tags. Clients SHOULD prefer labels[negotiated_lang] over 'label'.",
+              "additionalProperties": {"type": "string"},
+              "example": {
+                "en": "Dietary Energy Supply",
+                "fr": "Approvisionnement en énergie alimentaire",
+                "ar": "إمدادات الطاقة الغذائية",
+                "es": "Suministro de energía alimentaria",
+                "zh": "膳食能量供应"
+              }
+            },
+            "has_children": {
+              "type": "boolean",
+              "description": "True if this indicator has child indicators. Allows tree-rendering clients to show expand controls without a /children round-trip."
             },
             "parent_code": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "description": "Parent indicator code; null for domain-level root indicators. Analogous to skos:broader."
             },
             "unit": {
               "type": "string",
-              "description": "Unit of measure (e.g., 'kcal/person/day')"
+              "description": "Unit of measure (e.g., 'kcal/person/day')."
             },
             "description": {
-              "type": "string"
+              "type": "string",
+              "description": "Long-form description of the indicator."
             }
-          },
-          "required": [
-            "code",
-            "label",
-            "parent_code"
-          ]
+          }
         },
         "invertible": false,
-        "search": [
-          "exact",
-          "like"
-        ],
+        "search": ["exact", "like"],
         "on_invalid": "accept",
-        "hierarchical": true
+        "hierarchical": true,
+        "language_support": [
+          {"code": "en", "name": "English"},
+          {"code": "fr", "name": "Français",  "alternate": "French"},
+          {"code": "ar", "name": "العربية",   "alternate": "Arabic", "dir": "rtl"},
+          {"code": "es", "name": "Español",   "alternate": "Spanish"},
+          {"code": "zh", "name": "中文",       "alternate": "Chinese"}
+        ]
       },
       "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/members?limit=5"
     }

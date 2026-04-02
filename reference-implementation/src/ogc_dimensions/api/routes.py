@@ -1,14 +1,20 @@
 """API routes for dimension generators.
 
-Implements the generator capabilities per dimension:
-  GET  /dimensions                              -- list registered dimensions
-  GET  /dimensions/{dimension_id}/members      -- paginated members
+Serves dimension metadata as OGC API - Records collections and dimension
+members as GeoJSON Features (``geometry: null``), following the OGC
+Dimensions Building Blocks profile.
+
+Endpoints:
+  GET  /dimensions                              -- list dimension collections
+  GET  /dimensions/conformance                  -- conformance declaration
+  GET  /dimensions/{dimension_id}/members       -- paginated members (FeatureCollection)
   GET  /dimensions/{dimension_id}/extent        -- boundaries
   GET  /dimensions/{dimension_id}/inverse       -- single value inverse
   POST /dimensions/{dimension_id}/inverse       -- batch inverse
   GET  /dimensions/{dimension_id}/search        -- search members
   GET  /dimensions/{dimension_id}/children      -- direct children of a node
   GET  /dimensions/{dimension_id}/ancestors     -- ancestor chain for a member
+  GET  /dimensions/{dimension_id}/queryables    -- queryable properties
 """
 
 from __future__ import annotations
@@ -17,20 +23,35 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..generators import (
-    DekadalGenerator,
+    DailyPeriodGenerator,
     DimensionGenerator,
     IntegerRangeGenerator,
     LeveledTreeGenerator,
-    PentadalAnnualGenerator,
-    PentadalMonthlyGenerator,
     StaticTreeGenerator,
 )
 from ..generators.base import SearchProtocol
 
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# Conformance URIs
+# ---------------------------------------------------------------------------
+OGC_DIMENSIONS_CONFORMANCE = [
+    "http://www.opengis.net/spec/ogcapi-records-1/1.0/conf/core",
+    "http://www.opengis.net/spec/ogcapi-records-1/1.0/conf/record-core",
+    "http://www.opengis.net/spec/ogcapi-records-1/1.0/conf/record-collection",
+    "http://www.opengis.net/spec/ogcapi-records-1/1.0/conf/json",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-hierarchical",
+]
 
 # ---------------------------------------------------------------------------
 # URL helpers — produce fully-qualified, proxy-aware links
@@ -63,6 +84,7 @@ class DimensionConfig:
     """A named dimension backed by a generator."""
     generator: DimensionGenerator
     description: str = ""
+    dimension_type: str = "other"
     extent_min: str = "2024-01-01"
     extent_max: str = "2024-12-31"
 
@@ -70,29 +92,34 @@ class DimensionConfig:
 # Registry of named dimensions — each backed by a generator instance
 DIMENSIONS: dict[str, DimensionConfig] = {
     "dekadal": DimensionConfig(
-        generator=DekadalGenerator(),
+        generator=DailyPeriodGenerator(period_days=10, scheme="monthly"),
         description="10-day periods (36/year). Used by FAO ASIS, FEWS NET, TUW-GEO.",
+        dimension_type="temporal",
     ),
     "pentadal-monthly": DimensionConfig(
-        generator=PentadalMonthlyGenerator(),
+        generator=DailyPeriodGenerator(period_days=5, scheme="monthly"),
         description="5-day periods aligned to months (72/year). Used by CHIRPS, CDT, FAO.",
+        dimension_type="temporal",
     ),
     "pentadal-annual": DimensionConfig(
-        generator=PentadalAnnualGenerator(),
+        generator=DailyPeriodGenerator(period_days=5, scheme="annual"),
         description="5-day periods aligned to year start (73/year). Used by GPCP, CPC/NOAA.",
+        dimension_type="temporal",
     ),
     "integer-range": DimensionConfig(
         generator=IntegerRangeGenerator(step=100),
         description="Evenly-spaced integer bins (step=100). Elevation bands, percentiles.",
+        dimension_type="other",
         extent_min="0",
         extent_max="5000",
     ),
     "world-admin": DimensionConfig(
         generator=LeveledTreeGenerator(),
         description=(
-            "Hierarchical administrative boundaries: 5 continents → 49 countries. "
+            "Hierarchical administrative boundaries: 5 continents -> 49 countries. "
             "Demonstrates the Hierarchical conformance level (/children, /ancestors)."
         ),
+        dimension_type="nominal",
         extent_min="",
         extent_max="",
     ),
@@ -110,72 +137,315 @@ def _get_dimension(dimension_id: str) -> DimensionConfig:
     return dim
 
 
-def _member_to_dict(
+# ---------------------------------------------------------------------------
+# Member -> GeoJSON Feature conversion
+# ---------------------------------------------------------------------------
+
+def _member_to_feature(
     m,
     *,
+    dim_type: str = "other",
     gen: DimensionGenerator | None = None,
     dim_base_url: str | None = None,
 ) -> dict[str, Any]:
-    if m.extra:
-        d = dict(m.extra)
-    else:
-        d: dict[str, Any] = {"value": m.value, "index": m.index}
-        if m.code is not None:
-            d["code"] = m.code
-        if m.start is not None:
-            d["start"] = m.start
-        if m.end is not None:
-            d["end"] = m.end
+    """Convert a ``GeneratedMember`` to a GeoJSON Feature (OGC Record).
 
-    # Member-level navigation links (opt-in via ?links=true)
-    if gen is not None and dim_base_url is not None and m.code is not None:
-        member_links: list[dict[str, str]] = []
-        if gen.has_children(m.code):
-            member_links.append({
-                "rel": "children",
-                "href": f"{dim_base_url}/children?parent={m.code}",
-                "type": "application/json",
-            })
-        member_links.append({
-            "rel": "ancestors",
-            "href": f"{dim_base_url}/ancestors?member={m.code}",
+    Follows the ``dimension-member`` building block schema:
+    ``type: Feature``, ``id``, ``geometry: null``, ``properties``
+    with ``dimension:*`` namespaced fields.
+    """
+    code = m.code or str(m.value)
+    extra = m.extra or {}
+
+    props: dict[str, Any] = {
+        "type": "dimension-member",
+        "dimension:type": dim_type,
+        "dimension:code": code,
+        "dimension:index": m.index,
+    }
+
+    # Title — use label from extra, or the code
+    props["title"] = extra.get("label") or code
+
+    # Temporal interval (Records time object)
+    if m.start is not None and m.end is not None:
+        props["time"] = {"interval": [str(m.start), str(m.end)]}
+        props["dimension:start"] = str(m.start)
+        props["dimension:end"] = str(m.end)
+
+    # Integer range bounds
+    if "lower" in extra:
+        props["dimension:start"] = extra["lower"]
+    if "upper" in extra:
+        props["dimension:end"] = extra["upper"]
+
+    # Multilingual labels
+    labels = extra.get("labels")
+    if labels and isinstance(labels, dict):
+        props["labels"] = labels
+
+    # Hierarchy properties
+    parent_code = extra.get("parent_code")
+    if parent_code is not None:
+        props["dimension:parent"] = parent_code
+    level = extra.get("level")
+    if level is not None:
+        props["dimension:level"] = level
+    if m.has_children:
+        props["dimension:has_children"] = True
+
+    # Pass-through extra fields
+    for key in ("unit", "rank"):
+        if key in extra:
+            props[key] = extra[key]
+
+    # Build links
+    feature_links: list[dict[str, str]] = []
+    if gen is not None and dim_base_url is not None and code:
+        feature_links.append({
+            "href": f"{dim_base_url}/items/{code}",
+            "rel": "self",
+            "type": "application/geo+json",
+        })
+        feature_links.append({
+            "href": dim_base_url,
+            "rel": "collection",
             "type": "application/json",
         })
-        d["links"] = member_links
+        if gen.has_children(code):
+            feature_links.append({
+                "rel": "children",
+                "href": f"{dim_base_url}/children?parent={code}",
+                "type": "application/geo+json",
+            })
+        feature_links.append({
+            "rel": "ancestors",
+            "href": f"{dim_base_url}/ancestors?member={code}",
+            "type": "application/json",
+        })
 
-    return d
+    feature: dict[str, Any] = {
+        "type": "Feature",
+        "id": code,
+        "geometry": None,
+        "properties": props,
+    }
+    if feature_links:
+        feature["links"] = feature_links
 
+    return feature
+
+
+def _ancestor_dict_to_feature(
+    node: dict[str, Any],
+    *,
+    dim_type: str = "other",
+    gen: DimensionGenerator | None = None,
+    dim_base_url: str | None = None,
+) -> dict[str, Any]:
+    """Convert a raw ancestor dict (from ``gen.ancestors()``) to a GeoJSON Feature."""
+    code = node.get("code", "")
+    props: dict[str, Any] = {
+        "type": "dimension-member",
+        "dimension:type": dim_type,
+        "dimension:code": code,
+    }
+    props["title"] = node.get("label") or code
+
+    labels = node.get("labels")
+    if labels and isinstance(labels, dict):
+        props["labels"] = labels
+
+    parent_code = node.get("parent_code")
+    if parent_code is not None:
+        props["dimension:parent"] = parent_code
+    level = node.get("level")
+    if level is not None:
+        props["dimension:level"] = level
+
+    feature_links: list[dict[str, str]] = []
+    if gen is not None and dim_base_url is not None and code:
+        feature_links.append({
+            "href": f"{dim_base_url}/items/{code}",
+            "rel": "self",
+            "type": "application/geo+json",
+        })
+        if gen.has_children(code):
+            feature_links.append({
+                "rel": "children",
+                "href": f"{dim_base_url}/children?parent={code}",
+                "type": "application/geo+json",
+            })
+
+    feature: dict[str, Any] = {
+        "type": "Feature",
+        "id": code,
+        "geometry": None,
+        "properties": props,
+    }
+    if feature_links:
+        feature["links"] = feature_links
+
+    return feature
+
+
+def _build_feature_collection(
+    features: list[dict[str, Any]],
+    *,
+    number_matched: int,
+    number_returned: int,
+    links: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Build an OGC Records-style FeatureCollection response envelope."""
+    return {
+        "type": "FeatureCollection",
+        "numberMatched": number_matched,
+        "numberReturned": number_returned,
+        "features": features,
+        "links": links,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Dimension collection helper
+# ---------------------------------------------------------------------------
+
+def _dimension_to_collection(
+    dim_id: str, cfg: DimensionConfig, base_url: str,
+) -> dict[str, Any]:
+    """Convert a DimensionConfig to an OGC Records collection object."""
+    gen = cfg.generator
+    collection: dict[str, Any] = {
+        "id": dim_id,
+        "title": dim_id.replace("-", " ").title(),
+        "description": cfg.description,
+        "itemType": "record",
+        "cube:dimensions": {
+            dim_id: {
+                "type": cfg.dimension_type,
+                "generator": {
+                    "type": gen.generator_type,
+                    "config": gen.config_as_dict(),
+                    "invertible": gen.invertible,
+                    "capabilities": [c.value for c in gen.capabilities],
+                    "search_protocols": [s.value for s in gen.search_protocols],
+                },
+            }
+        },
+        "links": [
+            {
+                "rel": "self",
+                "href": f"{base_url}/{dim_id}",
+                "type": "application/json",
+            },
+            {
+                "rel": "items",
+                "href": f"{base_url}/{dim_id}/members",
+                "type": "application/geo+json",
+            },
+            {
+                "rel": "queryables",
+                "href": f"{base_url}/{dim_id}/queryables",
+                "type": "application/schema+json",
+                "title": "Queryable and sortable member properties",
+            },
+        ],
+    }
+
+    # Add extent for temporal dimensions
+    if cfg.dimension_type == "temporal" and cfg.extent_min and cfg.extent_max:
+        collection["extent"] = {
+            "temporal": {
+                "interval": [[f"{cfg.extent_min}T00:00:00Z", f"{cfg.extent_max}T00:00:00Z"]]
+            }
+        }
+
+    return collection
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @router.get("/")
 async def list_dimensions(request: Request):
-    """List registered dimensions and their generator capabilities."""
-    base = _self_url(request)  # e.g. https://host/prefix/dimensions
+    """List registered dimensions as OGC Records collections."""
+    base = _self_url(request)
     return {
-        "dimensions": [
-            {
-                "id": dim_id,
-                "description": cfg.description,
-                "generator": {
-                    "type": cfg.generator.generator_type,
-                    "invertible": cfg.generator.invertible,
-                    "capabilities": [c.value for c in cfg.generator.capabilities],
-                    "search_protocols": [s.value for s in cfg.generator.search_protocols],
-                },
-                "links": [
-                    {
-                        "rel": "members",
-                        "href": f"{base}/{dim_id}/members",
-                        "type": "application/json",
-                    },
-                    {
-                        "rel": "extent",
-                        "href": f"{base}/{dim_id}/extent",
-                        "type": "application/json",
-                    },
-                ],
-            }
+        "collections": [
+            _dimension_to_collection(dim_id, cfg, base)
             for dim_id, cfg in DIMENSIONS.items()
-        ]
+        ],
+        "links": [
+            {"rel": "self", "href": base, "type": "application/json"},
+        ],
+    }
+
+
+@router.get("/conformance")
+async def conformance():
+    """OGC API conformance declaration."""
+    return {"conformsTo": OGC_DIMENSIONS_CONFORMANCE}
+
+
+@router.get("/{dimension_id}/queryables")
+async def queryables(
+    request: Request,
+    dimension_id: str,
+):
+    """Return the queryable and sortable properties for this dimension's members.
+
+    Follows OGC API - Features Part 3 (Filtering) -- a JSON Schema document
+    listing the output fields that clients may use as filter or sort targets.
+    """
+    cfg = _get_dimension(dimension_id)
+    gen = cfg.generator
+    self_url = _self_url(request)
+
+    output_schema: dict[str, Any] = {}
+    if hasattr(gen, "output_schema"):
+        output_schema = gen.output_schema or {}
+
+    properties = output_schema.get("properties", {
+        "code": {"type": "string", "title": "Member code"},
+    })
+
+    x_ogc_params: dict[str, Any] = {
+        "sort_dir": {
+            "type": "string",
+            "enum": ["asc", "desc"],
+            "default": "asc",
+            "title": "Sort direction",
+        },
+    }
+    sortable_fields = ["code"]
+    if any("label" in str(p) for p in properties):
+        sortable_fields.append("label")
+    if "rank" in properties:
+        sortable_fields.append("rank")
+    x_ogc_params["sort_by"] = {
+        "type": "string",
+        "enum": sortable_fields,
+        "title": "Sort field",
+    }
+    if gen.hierarchical and hasattr(gen, "language_support"):
+        langs = [ls.get("code") for ls in (gen.language_support or []) if ls.get("code")]
+        if langs:
+            x_ogc_params["language"] = {
+                "type": "string",
+                "title": "Language",
+                "description": "RFC 5646 Language-Tag.",
+                "examples": langs,
+            }
+
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"{self_url}",
+        "type": "object",
+        "title": f"Queryables for dimension '{dimension_id}'",
+        "properties": properties,
+        "x-ogc-config": gen.config_as_dict(),
+        "x-ogc-parameters": x_ogc_params,
     }
 
 
@@ -187,74 +457,78 @@ async def generate(
     extent_max: str | None = Query(None, description="Extent maximum (defaults to dimension config)"),
     limit: int = Query(100, ge=1, le=10000, description="Max items per page"),
     offset: int = Query(0, ge=0, description="Items to skip"),
-    format: str = Query("structured", description="Output format: structured, datetime, native"),
     parent: str | None = Query(None, description="Filter to direct children of this member code (Hierarchical conformance)"),
-    level: int | None = Query(None, description="Hierarchy level filter — return only members at this level (leveled strategy)"),
-    links: bool = Query(False, description="Include per-member navigation links (children, ancestors). Only effective for hierarchical dimensions."),
+    level: int | None = Query(None, description="Hierarchy level filter (leveled strategy)"),
+    language: str | None = Query(None, description="RFC 5646 Language-Tag selecting label language and sort collation."),
+    sort_by: str | None = Query(None, description="Output field to sort members by (e.g. 'code', 'label', 'rank')."),
+    sort_dir: str = Query("asc", description="Sort direction: 'asc' (default) or 'desc'."),
 ):
-    """Generate paginated dimension members within extent.
+    """Generate paginated dimension members as an OGC Records FeatureCollection.
 
-    For hierarchical dimensions, ``?parent=X`` returns direct children of X,
-    equivalent to ``/children?parent=X``.  Without ``parent``, root members
-    (those with no parent) are returned.  The ``?level=N`` parameter filters
-    to a specific hierarchy level (leveled strategy).
+    Each member is a GeoJSON Feature with ``geometry: null`` and
+    ``dimension:*`` properties per the dimension-member building block.
     """
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
 
-    result = gen.generate(ext_min, ext_max, limit=limit, offset=offset, parent=parent, level=level)
+    effective_lang = language or request.headers.get("accept-language", "").split(",")[0].split(";")[0].strip() or None
 
-    # Build member-level link context only when opt-in and hierarchical
-    emit_member_links = links and gen.hierarchical
-    link_gen = gen if emit_member_links else None
-    link_base = _parent_url(request) if emit_member_links else None  # .../dimensions/{id}
+    result = gen.generate(
+        ext_min, ext_max,
+        limit=limit, offset=offset,
+        parent=parent, level=level,
+        language=effective_lang,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
 
-    values: list[Any]
-    if format == "datetime":
-        values = [m.value for m in result.members]
-    elif format == "native":
-        values = [m.code for m in result.members]
-    else:
-        values = [_member_to_dict(m, gen=link_gen, dim_base_url=link_base) for m in result.members]
+    # Build member-level link context for hierarchical dimensions
+    emit_links = gen.hierarchical
+    link_gen = gen if emit_links else None
+    dim_base = _parent_url(request) if emit_links else None
 
-    self_url = _self_url(request)  # e.g. https://host/prefix/dimensions/{id}/members
-    _extra_qs = ""
+    features = [
+        _member_to_feature(m, dim_type=cfg.dimension_type, gen=link_gen, dim_base_url=dim_base)
+        for m in result.members
+    ]
+
+    self_url = _self_url(request)
+    extra_qs = ""
     if parent:
-        _extra_qs += f"&parent={parent}"
+        extra_qs += f"&parent={parent}"
     if level is not None:
-        _extra_qs += f"&level={level}"
+        extra_qs += f"&level={level}"
+    if effective_lang:
+        extra_qs += f"&language={effective_lang}"
+    if sort_by:
+        extra_qs += f"&sort_by={sort_by}&sort_dir={sort_dir}"
 
-    links = [
-        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}{_extra_qs}", "type": "application/json"},
+    resp_links = [
+        {"rel": "self", "href": f"{self_url}?limit={limit}&offset={offset}{extra_qs}", "type": "application/geo+json"},
+        {"rel": "collection", "href": _parent_url(request), "type": "application/json"},
     ]
     if offset + limit < result.number_matched:
-        links.append(
-            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}{_extra_qs}", "type": "application/json"}
+        resp_links.append(
+            {"rel": "next", "href": f"{self_url}?limit={limit}&offset={offset + limit}{extra_qs}", "type": "application/geo+json"}
         )
     if offset > 0:
         prev_offset = max(0, offset - limit)
-        links.append(
-            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}{_extra_qs}", "type": "application/json"}
-        )
-    if parent and gen.hierarchical:
-        dim_base = _parent_url(request)  # .../dimensions/{id}
-        links.append(
-            {"rel": "parent", "href": f"{dim_base}/members?code={parent}", "type": "application/json"}
+        resp_links.append(
+            {"rel": "prev", "href": f"{self_url}?limit={limit}&offset={prev_offset}{extra_qs}", "type": "application/geo+json"}
         )
 
-    response: dict[str, Any] = {
-        "dimension": dimension_id,
-        "generator": gen.generator_type,
-        "numberMatched": result.number_matched,
-        "numberReturned": result.number_returned,
-        "values": values,
-        "links": links,
-    }
-    if parent:
-        response["parent"] = parent
-    return response
+    body = _build_feature_collection(
+        features,
+        number_matched=result.number_matched,
+        number_returned=result.number_returned,
+        links=resp_links,
+    )
+
+    if effective_lang:
+        return JSONResponse(content=body, headers={"Content-Language": effective_lang})
+    return body
 
 
 @router.get("/{dimension_id}/extent")
@@ -351,6 +625,7 @@ async def inverse_batch(
 
 @router.get("/{dimension_id}/search")
 async def search(
+    request: Request,
     dimension_id: str,
     exact: str | None = Query(None, description="Exact match on member code"),
     min: str | None = Query(None, description="Range minimum"),
@@ -359,8 +634,12 @@ async def search(
     extent_min: str | None = Query(None, description="Extent minimum"),
     extent_max: str | None = Query(None, description="Extent maximum"),
     limit: int = Query(100, ge=1, le=10000),
+    language: str | None = Query(None, description="RFC 5646 Language-Tag."),
 ):
-    """Search for dimension members matching a query."""
+    """Search for dimension members matching a query.
+
+    Returns an OGC Records FeatureCollection.
+    """
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
     ext_min = extent_min or cfg.extent_min
@@ -377,8 +656,9 @@ async def search(
             "limit": limit,
         }
     elif like is not None:
+        effective_lang = language or request.headers.get("accept-language", "").split(",")[0].split(";")[0].strip() or None
         protocol = SearchProtocol.LIKE
-        query = {"like": like, "limit": limit}
+        query = {"like": like, "limit": limit, "language": effective_lang}
     else:
         raise HTTPException(
             status_code=400,
@@ -395,14 +675,22 @@ async def search(
 
     result = gen.search(protocol, ext_min, ext_max, **query)
 
-    return {
-        "dimension": dimension_id,
-        "generator": gen.generator_type,
-        "protocol": protocol.value,
-        "numberMatched": result.number_matched,
-        "numberReturned": result.number_returned,
-        "values": [_member_to_dict(m) for m in result.members],
-    }
+    features = [
+        _member_to_feature(m, dim_type=cfg.dimension_type)
+        for m in result.members
+    ]
+
+    self_url = _self_url(request)
+    resp_links = [
+        {"rel": "self", "href": self_url, "type": "application/geo+json"},
+    ]
+
+    return _build_feature_collection(
+        features,
+        number_matched=result.number_matched,
+        number_returned=result.number_returned,
+        links=resp_links,
+    )
 
 
 @router.get("/{dimension_id}/children")
@@ -412,13 +700,14 @@ async def children(
     parent: str = Query(..., description="Return direct children of this member code"),
     limit: int = Query(100, ge=1, le=10000, description="Max items per page"),
     offset: int = Query(0, ge=0, description="Items to skip"),
-    links: bool = Query(False, description="Include per-member navigation links (children, ancestors)."),
+    language: str | None = Query(None, description="RFC 5646 Language-Tag."),
+    sort_by: str | None = Query(None, description="Output field to sort members by."),
+    sort_dir: str = Query("asc", description="Sort direction: 'asc' or 'desc'."),
 ):
-    """Return paginated direct children of a hierarchy node.
+    """Return paginated direct children of a hierarchy node as a FeatureCollection.
 
-    Mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children)
-    applied to dimension members rather than STAC Collections.
-    Requires Hierarchical conformance level on the generator.
+    Mirrors the STAC API Children Extension applied to dimension members.
+    Requires Hierarchical conformance level.
     """
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
@@ -429,50 +718,55 @@ async def children(
             "does not support Hierarchical operations (/children, /ancestors).",
         )
 
-    result = gen.children(parent, limit=limit, offset=offset)
+    effective_lang = language or request.headers.get("accept-language", "").split(",")[0].split(";")[0].strip() or None
+    result = gen.children(
+        parent, limit=limit, offset=offset,
+        sort_by=sort_by, sort_dir=sort_dir, language=effective_lang,
+    )
 
-    self_url = _self_url(request)
     dim_base = _parent_url(request)
 
-    # Member-level link context (opt-in)
-    link_gen = gen if links else None
-    link_base = dim_base if links else None
+    features = [
+        _member_to_feature(m, dim_type=cfg.dimension_type, gen=gen, dim_base_url=dim_base)
+        for m in result.members
+    ]
 
+    self_url = _self_url(request)
     resp_links = [
-        {"rel": "self", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset}", "type": "application/json"},
+        {"rel": "self", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset}", "type": "application/geo+json"},
+        {"rel": "collection", "href": dim_base, "type": "application/json"},
     ]
     if offset + limit < result.number_matched:
         resp_links.append(
-            {"rel": "next", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset + limit}", "type": "application/json"}
+            {"rel": "next", "href": f"{self_url}?parent={parent}&limit={limit}&offset={offset + limit}", "type": "application/geo+json"}
         )
     if offset > 0:
         prev_offset = max(0, offset - limit)
         resp_links.append(
-            {"rel": "prev", "href": f"{self_url}?parent={parent}&limit={limit}&offset={prev_offset}", "type": "application/json"}
+            {"rel": "prev", "href": f"{self_url}?parent={parent}&limit={limit}&offset={prev_offset}", "type": "application/geo+json"}
         )
-    resp_links.append(
-        {"rel": "parent", "href": f"{dim_base}/members?code={parent}", "type": "application/json"}
+
+    body = _build_feature_collection(
+        features,
+        number_matched=result.number_matched,
+        number_returned=result.number_returned,
+        links=resp_links,
     )
 
-    return {
-        "dimension": dimension_id,
-        "generator": gen.generator_type,
-        "parent": parent,
-        "numberMatched": result.number_matched,
-        "numberReturned": result.number_returned,
-        "values": [_member_to_dict(m, gen=link_gen, dim_base_url=link_base) for m in result.members],
-        "links": resp_links,
-    }
+    if effective_lang:
+        return JSONResponse(content=body, headers={"Content-Language": effective_lang})
+    return body
 
 
 @router.get("/{dimension_id}/ancestors")
 async def ancestors(
+    request: Request,
     dimension_id: str,
     member: str = Query(..., description="Return ancestors of this member code"),
 ):
-    """Return the ancestor chain for a member, from root to the member (inclusive).
+    """Return the ancestor chain as a FeatureCollection, from root to member (inclusive).
 
-    Requires Hierarchical conformance level on the generator.
+    Requires Hierarchical conformance level.
     """
     cfg = _get_dimension(dimension_id)
     gen = cfg.generator
@@ -490,9 +784,21 @@ async def ancestors(
             detail=f"Member '{member}' not found in dimension '{dimension_id}'.",
         )
 
-    return {
-        "dimension": dimension_id,
-        "generator": gen.generator_type,
-        "member": member,
-        "ancestors": chain,
-    }
+    dim_base = _parent_url(request)
+
+    # ancestors() returns list[dict] (raw node dicts), not GeneratedMember
+    features = [
+        _ancestor_dict_to_feature(node, dim_type=cfg.dimension_type, gen=gen, dim_base_url=dim_base)
+        for node in chain
+    ]
+
+    self_url = _self_url(request)
+    return _build_feature_collection(
+        features,
+        number_matched=len(chain),
+        number_returned=len(chain),
+        links=[
+            {"rel": "self", "href": f"{self_url}?member={member}", "type": "application/geo+json"},
+            {"rel": "collection", "href": dim_base, "type": "application/json"},
+        ],
+    )

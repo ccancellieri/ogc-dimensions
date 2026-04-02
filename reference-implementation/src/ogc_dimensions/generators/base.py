@@ -6,10 +6,26 @@ mapping to the conformance levels in the specification:
   Invertible = + inverse
   Searchable = + search (exact, range, like)
   Similarity = + search (vector)
+
+Three distinct input categories exist for any generator:
+
+  config     — Author-set constants, fixed at Collection-authoring time.
+               Exposed via the 'config' field in the generator JSON object
+               and in the /dimensions list + /queryables API responses.
+               Clients cannot override these per-request.
+               Examples: IntegerRangeGenerator.step, epoch year.
+
+  parameters — Query-time inputs clients pass per request.
+               Declared as a JSON Schema in the generator JSON object.
+               Examples: language, sort_by, sort_dir, parent, level.
+
+  extent     — Dimension bounds (extent_min / extent_max), already
+               a first-class field on the dimension object and the API.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -32,6 +48,23 @@ class SearchProtocol(str, enum.Enum):
     VECTOR = "vector"
 
 
+@dataclass(frozen=True)
+class GeneratorConfig:
+    """Base class for generator instance configuration.
+
+    Subclasses declare the author-set constants that parameterise a specific
+    generator algorithm.  These values are static for the lifetime of the
+    Collection and map 1:1 to the ``config`` field in the generator JSON
+    object.  Generators with no configurable constants subclass this with no
+    additional fields and return an instance of their empty subclass from the
+    ``config`` property.
+    """
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return config as a plain dict suitable for JSON serialisation."""
+        return dataclasses.asdict(self)
+
+
 @dataclass
 class GeneratedMember:
     """A single generated dimension member."""
@@ -42,6 +75,7 @@ class GeneratedMember:
     start: str | None = None
     end: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+    has_children: bool = False
 
 
 @dataclass
@@ -93,6 +127,24 @@ class DimensionGenerator(ABC):
     def generator_type(self) -> str:
         """Short identifier (e.g., 'dekadal', 'integer-range')."""
         ...
+
+    @property
+    @abstractmethod
+    def config(self) -> GeneratorConfig:
+        """Author-set configuration constants for this generator instance.
+
+        Returns a frozen :class:`GeneratorConfig` subclass carrying the static
+        values set by the data author when declaring the dimension.  These are
+        exposed via the ``/dimensions`` list and ``/queryables`` endpoints so
+        clients can discover the exact parameterisation without reading server
+        source code.  Generators with no configurable constants return an
+        instance of their empty config subclass (``as_dict()`` → ``{}``).
+        """
+        ...
+
+    def config_as_dict(self) -> dict[str, Any]:
+        """Return generator config as a plain JSON-serialisable dict."""
+        return self.config.as_dict()
 
     @property
     @abstractmethod
