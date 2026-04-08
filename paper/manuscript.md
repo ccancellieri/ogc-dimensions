@@ -9,7 +9,9 @@ Geospatial datacube standards define dimension metadata as inline arrays embedde
 
 We present a backwards-compatible extension to the STAC Datacube specification introducing three properties: `size` and `href` for paginated access following OGC API conventions, and a `generator` object that encapsulates algorithmic member generation with machine-discoverable OpenAPI definitions. The generator abstraction applies uniformly to temporal calendars, integer ranges, and coded hierarchies. For hierarchical dimensions, a `hierarchy` property provides tree metadata while the generator type determines the navigation strategy -- adding new strategies requires only new generator types, not schema changes. Five conformance levels (Basic, Invertible, Searchable, Hierarchical, Similarity) allow incremental adoption.
 
-We validate the approach through six generator types deployed as twelve dimensions on the FAO Agro-Informatics Platform, covering calendar interoperability, hierarchical vocabulary navigation, and cross-collection alignment. Source code, JSON Schema, and worked examples are available as open-source software.
+The specification is framed as a profile of OGC API - Records: dimension collections carry `itemType: "record"`, members are GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties, and paginated responses use the standard FeatureCollection envelope. This alignment provides immediate interoperability with OGC API tooling and a packaging pathway through OGC Building Blocks.
+
+We validate the approach through six generator types deployed as twelve dimensions on the FAO Agro-Informatics Platform, covering calendar interoperability, hierarchical vocabulary navigation, and cross-collection alignment. Source code, JSON Schema, OGC Building Blocks, and worked examples are available as open-source software.
 
 ## 1. Introduction
 
@@ -75,7 +77,15 @@ The STAC API Children Extension (`https://api.stacspec.org/v1.0.0-rc.2/children`
 
 The FAO Agricultural Stress Index System (ASIS) implements a proprietary dimensions API at `https://data.apps.fao.org/gismgr/api/v2/catalog`. This API provides paginated dimension listing and paginated member enumeration through a 4-level resource hierarchy (workspaces, dimensions, members, member detail). The ASIS API demonstrates the practical need for paginated dimension access in production agricultural monitoring systems. However, it uses a non-standard pagination model (page-based rather than offset-based), wraps responses in a custom envelope, and models dekadal periods as categorical ("WHAT" type) rather than temporal. The present work draws on this operational experience while aligning with OGC API conventions.
 
-### 2.7 Comparative Summary
+### 2.7 OGC API - Records
+
+OGC API - Records (OGC doc 20-004) defines a RESTful interface for catalog records that builds on OGC API - Features. Collections carry `itemType: "record"` and serve records as GeoJSON Features with standardized properties (`type`, `title`, `description`, `created`, `updated`). Paginated responses use the GeoJSON FeatureCollection envelope with `numberMatched`, `numberReturned`, and `links` containing `rel:next`/`rel:prev` link relations — the same pagination model as OGC API - Features.
+
+The Records standard is designed as a profile target: domain-specific APIs can adopt its response envelope and link conventions while adding domain-specific properties. This profile pattern is directly applicable to dimension metadata. Dimension members are non-spatial catalog entries — they have codes, labels, temporal or numeric bounds, and hierarchical relationships, but no geometry. Modeling them as GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties (e.g., `dimension:type`, `dimension:code`, `dimension:start`, `dimension:end`) yields responses that are structurally valid OGC API - Records output while carrying the domain semantics defined in this specification.
+
+The alignment provides three practical benefits. First, existing OGC API tooling (validators, client libraries, test suites) works unchanged against dimension endpoints. Second, dimension collections can coexist alongside STAC and other record types in the same catalog infrastructure — a catalog can serve both STAC items and dimension records, distinguished by `itemType`. Third, the OGC Building Blocks framework provides a modular packaging mechanism for the conformance classes defined in Section 3.5, enabling implementers to adopt individual capabilities (pagination, inversion, hierarchy) independently.
+
+### 2.8 Comparative Summary
 
 Table 1 summarizes the capabilities surveyed across existing standards and this proposal. No existing standard addresses all four requirements simultaneously.
 
@@ -89,8 +99,9 @@ Table 1 summarizes the capabilities surveyed across existing standards and this 
 | RDF Data Cube Vocabulary | N/A (RDF layer) | No | No | No |
 | openEO | No (inline arrays) | No | No | No |
 | CF Conventions | No (file-level) | No | No | No |
+| OGC API - Records | Yes (FeatureCollection) | No | No | No |
 | FAO ASIS API | Yes (proprietary) | No | No | No |
-| **This proposal** | **Yes** (OGC API) | **Yes** (OpenAPI) | **Yes** (`/inverse`) | **Yes** (`/children`, `/ancestors`) |
+| **This proposal** | **Yes** (OGC Records profile) | **Yes** (OpenAPI) | **Yes** (`/inverse`) | **Yes** (`/children`, `/ancestors`) |
 
 ## 3. Specification
 
@@ -104,22 +115,40 @@ We propose two new properties on the STAC Datacube Extension dimension object:
 
 Both properties are backwards-compatible additions. Existing clients that read only the `values` array continue to work for small dimensions. Servers may provide inline `values` for dimensions below an implementation-defined threshold (recommended: 1000 members) while using `href` for larger dimensions.
 
-A paginated response follows OGC API - Features conventions:
+A paginated response follows the OGC API - Records profile: dimension members are GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties, wrapped in a FeatureCollection envelope with OGC API pagination fields:
 
 ```json
 {
-  "dimension": "dekadal",
+  "type": "FeatureCollection",
   "numberMatched": 900,
-  "numberReturned": 5,
-  "values": ["2024-K01", "2024-K02", "2024-K03", "2024-K04", "2024-K05"],
+  "numberReturned": 3,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "2024-K01",
+      "geometry": null,
+      "properties": {
+        "type": "dimension-member",
+        "dimension:type": "temporal",
+        "dimension:code": "2024-K01",
+        "dimension:index": 0,
+        "dimension:start": "2024-01-01",
+        "dimension:end": "2024-01-10",
+        "time": {"interval": ["2024-01-01", "2024-01-10"]}
+      }
+    }
+  ],
   "links": [
-    {"rel": "self",  "href": ".../members?limit=5&offset=0"},
-    {"rel": "next",  "href": ".../members?limit=5&offset=5"}
+    {"rel": "self",  "href": ".../members?limit=3&offset=0", "type": "application/geo+json"},
+    {"rel": "next",  "href": ".../members?limit=3&offset=3", "type": "application/geo+json"},
+    {"rel": "collection", "href": ".../dekadal", "type": "application/json"}
   ]
 }
 ```
 
-Clients follow `rel:next` links to retrieve subsequent pages. The `numberMatched` field communicates total cardinality without downloading all values, while `numberReturned` indicates the current page size.
+Each member Feature carries `dimension:type` (matching the dimension's declared type), `dimension:code` (the member's unique identifier within the dimension), `dimension:index` (zero-based ordinal position), and type-specific bounds (`dimension:start`, `dimension:end` for temporal and numeric dimensions). Temporal members additionally include a `time` property with an `interval` array for compatibility with OGC API temporal filtering. The `geometry: null` value signals non-spatial records, consistent with the OGC API - Records pattern for catalog entries that have no geographic footprint.
+
+Clients follow `rel:next` links to retrieve subsequent pages. The `numberMatched` field communicates total cardinality without downloading all values, while `numberReturned` indicates the current page size. The `rel:collection` link points back to the dimension's collection description.
 
 ### 3.2 The Generator Object
 
@@ -245,7 +274,7 @@ The Hierarchical conformance level is orthogonal to all other conformance levels
 
 ### 4.1 Reference Implementation
 
-We provide an open-source reference implementation as a Python package (`ogc-dimensions`) with a FastAPI REST API. The source code, JSON Schema specification, and worked examples are available at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license.
+We provide an open-source reference implementation as a Python package (`ogc-dimensions`) with a FastAPI REST API. All paginated endpoints return OGC API - Records compliant responses: FeatureCollection envelopes containing GeoJSON Feature members with `geometry: null` and `dimension:*` namespaced properties. A `/conformance` endpoint declares conformance to both OGC API - Records and OGC Dimensions conformance classes. The source code, JSON Schema specification, OGC Building Blocks, and worked examples are available at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license.
 
 A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the GeoID catalog platform (https://github.com/un-fao/geoid). The deployment demonstrates all generator endpoints with full pagination, inverse mapping, and search capabilities. The Swagger UI is accessible at https://data.review.fao.org/geospatial/v2/api/tools/docs, and the `href` links in the worked examples point directly to these live endpoints.
 
@@ -321,17 +350,24 @@ The 100-year extents are intentional: they produce member counts (3,636 to 7,373
 
 ```
 GET /dimensions/temporal-dekadal/members?limit=10
-→ {"numberMatched": 3636, "numberReturned": 10,
-   "values": [{"code": "1950-K01", "start": "1950-01-01", "end": "1950-01-10"}, ...],
+→ {"type": "FeatureCollection", "numberMatched": 3636, "numberReturned": 10,
+   "features": [{"type": "Feature", "id": "1950-K01", "geometry": null,
+     "properties": {"type": "dimension-member", "dimension:type": "temporal",
+       "dimension:code": "1950-K01", "dimension:start": "1950-01-01",
+       "dimension:end": "1950-01-10", "time": {"interval": ["1950-01-01", "1950-01-10"]}}}, ...],
    "links": [{"rel": "next", "href": "...?limit=10&offset=10"}]}
 
 GET /dimensions/temporal-pentadal-monthly/members?limit=10
-→ {"numberMatched": 7272, "numberReturned": 10,
-   "values": [{"code": "1950-P01", "start": "1950-01-01", "end": "1950-01-05"}, ...]}
+→ {"type": "FeatureCollection", "numberMatched": 7272, "numberReturned": 10,
+   "features": [{"type": "Feature", "id": "1950-P01", "geometry": null,
+     "properties": {"dimension:code": "1950-P01", "dimension:start": "1950-01-01",
+       "dimension:end": "1950-01-05"}}, ...]}
 
 GET /dimensions/temporal-pentadal-annual/members?limit=10
-→ {"numberMatched": 7373, "numberReturned": 10,
-   "values": [{"code": "1950-A01", "start": "1950-01-01", "end": "1950-01-05"}, ...]}
+→ {"type": "FeatureCollection", "numberMatched": 7373, "numberReturned": 10,
+   "features": [{"type": "Feature", "id": "1950-A01", "geometry": null,
+     "properties": {"dimension:code": "1950-A01", "dimension:start": "1950-01-01",
+       "dimension:end": "1950-01-05"}}, ...]}
 ```
 
 The first period of both pentadal systems happens to coincide (1–5 January). The divergence becomes visible from period 6 onward, and is most acute in February. By deploying all three systems on the same endpoint with the same extent, the reference implementation provides a concrete demonstration that can be used in conformance testing and interoperability workshops.
@@ -420,22 +456,34 @@ This use case corresponds architecturally to vocabulary services such as AGROVOC
 
 ```
 GET /dimensions/elevation-bands/extent
-→ {"native": {"min": 0, "max": 8848}, "size": 177}
+→ {"size": 177, "native": {"min": 0, "max": 8848}}
+
+GET /dimensions/elevation-bands/members?limit=2
+→ {"type": "FeatureCollection", "numberMatched": 177, "numberReturned": 2,
+   "features": [
+    {"type": "Feature", "id": "0", "geometry": null,
+     "properties": {"type": "dimension-member", "dimension:type": "other",
+       "dimension:code": "0", "dimension:index": 0,
+       "dimension:start": 0, "dimension:end": 49}},
+    {"type": "Feature", "id": "50", "geometry": null,
+     "properties": {"type": "dimension-member", "dimension:type": "other",
+       "dimension:code": "50", "dimension:index": 1,
+       "dimension:start": 50, "dimension:end": 99}}]}
 
 GET /dimensions/elevation-bands/inverse?value=4500
-→ {"valid": true, "member": 4500, "index": 90,
+→ {"valid": true, "member": "4500", "index": 90,
    "range": {"start": 4500, "end": 4550}}
 
 GET /dimensions/elevation-bands/inverse?value=9000
 → {"valid": false, "reason": "9000 is outside extent [0, 8848]",
-   "nearest": {"member": 8800, "index": 176}}
+   "nearest": {"member": "8800", "index": 176}}
 
 POST /dimensions/elevation-bands/inverse
 {"values": ["100", "4500", "8800", "9000"], "on_invalid": "reject"}
 → {"count": 4, "results": [
-    {"valid": true,  "member": 100,  "index": 2},
-    {"valid": true,  "member": 4500, "index": 90},
-    {"valid": true,  "member": 8800, "index": 176},
+    {"valid": true,  "member": "100",  "index": 2},
+    {"valid": true,  "member": "4500", "index": 90},
+    {"valid": true,  "member": "8800", "index": 176},
     {"valid": false, "reason": "9000 is outside extent [0, 8848]"}
   ]}
 ```
@@ -454,13 +502,15 @@ We propose a phased approach to standardization:
 
 1. **Community publication**: This paper and the companion GitHub repository (specification, reference implementation, worked examples) serve as the initial community contribution.
 
-2. **STAC Community Extension**: Submit JSON Schema changes (`size`, `href`, `generator`) to `stac-extensions/datacube`, referencing Testbed 19/20 findings.
+2. **OGC Building Blocks**: The five conformance classes defined in Section 3.5 are packaged as OGC Building Blocks: `dimension-collection` (collection-level metadata with `itemType: "record"` and `cube:dimensions`), `dimension-member` (GeoJSON Feature schema with `dimension:*` properties), `dimension-pagination` (FeatureCollection envelope with OGC API pagination), `dimension-inverse` (value-to-member mapping), and `dimension-hierarchical` (`/children`, `/ancestors` endpoints with tree navigation links). Each building block includes a JSON Schema, description, and worked examples, enabling implementers to adopt individual conformance classes independently.
 
-3. **OGC GeoDataCube SWG**: Submit as a Change Request Proposal to the GeoDataCube specification, proposing `generator` as a new conformance class.
+3. **STAC Community Extension**: Submit JSON Schema changes (`size`, `href`, `generator`) to `stac-extensions/datacube`, referencing Testbed 19/20 findings.
 
-4. **OGC Naming Authority**: Register generator algorithm definitions (dekadal, pentadal-monthly, pentadal-annual) as OGC Definition URIs with SKOS RDF descriptions.
+4. **OGC GeoDataCube SWG**: Submit as a Change Request Proposal to the GeoDataCube specification, proposing `generator` as a new conformance class. The OGC API - Records profile framing ensures that dimension endpoints are structurally compatible with the broader OGC API ecosystem.
 
-5. **OGC Innovation Program**: Propose "Scalable Dimension Members" as a thread topic for a future OGC Testbed, with the reference implementation as a testbed component.
+5. **OGC Naming Authority**: Register generator algorithm definitions (dekadal, pentadal-monthly, pentadal-annual) as OGC Definition URIs with SKOS RDF descriptions.
+
+6. **OGC Innovation Program**: Propose "Scalable Dimension Members" as a thread topic for a future OGC Testbed, with the reference implementation as a testbed component.
 
 A natural objection is that extending STAC's datacube schema is "too opinionated" -- that dimension pagination and generation should be addressed at a higher abstraction level, such as a standalone OGC Building Block or a separate API profile. We argue that the STAC Datacube Extension is the correct integration point for three reasons. First, the GeoDataCube SWG charter explicitly adopts STAC `cube:dimensions` as its metadata model; any solution not expressed in that schema requires consumers to reconcile two independent dimension metadata sources. Second, the properties we add (`size`, `href`, `generator`, `hierarchy`) are strictly optional and backwards-compatible: existing clients and validators ignore unknown properties per JSON processing rules, so the extension imposes zero cost on implementations that do not need it. Third, the STAC community extension ecosystem already provides a proven governance model for domain-specific additions (e.g., `eo`, `sar`, `pointcloud`), with clear promotion paths from community extension to official extension. A standalone profile would require separate discovery, separate tooling, and separate governance -- precisely the fragmentation that the GDC SWG was created to reduce.
 
@@ -484,7 +534,9 @@ We have presented a backwards-compatible extension to the STAC Datacube dimensio
 
 Beyond the core three properties, we have introduced two additional contributions. The `hierarchy` property with recursive and leveled strategies extends the model to tree-structured nominal and ordinal dimensions, providing a standard REST interface for progressive tree navigation that is aligned with the STAC API Children Extension and directly applicable to administrative boundary datasets, statistical indicator catalogs, and species classification systems. Two new dimension types, `nominal` and `ordinal`, improve expressiveness beyond the existing `other` fallback.
 
-The approach is validated through a reference implementation of six generator types deployed as twelve named dimensions on the FAO Agro-Informatics Platform, demonstrating all five conformance levels across six operationally motivated use cases: calendar interoperability between competing pentadal systems, recursive indicator hierarchies, leveled administrative boundary navigation, forestry species search, elevation band integrity, and cross-collection temporal alignment. The specification, JSON Schema, and reference implementation are available as open-source artifacts at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license, and are designed to support the OGC GeoDataCube Standards Working Group and the STAC community extension ecosystem.
+The entire specification is framed as a profile of OGC API - Records: dimension collections declare `itemType: "record"`, members are served as GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties, and all paginated endpoints return standard FeatureCollection envelopes. This alignment provides immediate interoperability with OGC API tooling and validators. The five conformance classes are packaged as OGC Building Blocks, enabling modular adoption.
+
+The approach is validated through a reference implementation of six generator types deployed as twelve named dimensions on the FAO Agro-Informatics Platform, demonstrating all five conformance levels across six operationally motivated use cases: calendar interoperability between competing pentadal systems, recursive indicator hierarchies, leveled administrative boundary navigation, forestry species search, elevation band integrity, and cross-collection temporal alignment. The specification, JSON Schema, OGC Building Blocks, and reference implementation are available as open-source artifacts at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license, and are designed to support the OGC GeoDataCube Standards Working Group and the STAC community extension ecosystem.
 
 ## References
 
@@ -545,3 +597,7 @@ The approach is validated through a reference implementation of six generator ty
 28. FAO. Global Administrative Unit Layers (GAUL). https://www.fao.org/geonetwork/srv/en/metadata.show?id=12691
 
 29. FAO. AGROVOC Multilingual Thesaurus. https://www.fao.org/agrovoc/
+
+30. OGC. OGC API - Records - Part 1: Core. OGC doc 20-004. https://docs.ogc.org/DRAFTS/20-004.html
+
+31. OGC. OGC Building Blocks. https://opengeospatial.github.io/bblocks/
