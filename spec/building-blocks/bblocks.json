@@ -10,8 +10,24 @@
       "link": "https://docs.ogc.org/is/20-004/20-004.html"
     },
     {
+      "title": "OGC API - Common Part 2 (OGC 19-072)",
+      "link": "https://docs.ogc.org/is/19-072/19-072.html"
+    },
+    {
       "title": "STAC Datacube Extension",
       "link": "https://github.com/stac-extensions/datacube"
+    },
+    {
+      "title": "STAC Language Extension",
+      "link": "https://stac-extensions.github.io/language/v1.0.0/schema.json"
+    },
+    {
+      "title": "STAC API Children Extension",
+      "link": "https://github.com/stac-api-extensions/children"
+    },
+    {
+      "title": "OGC API Common Collection Hierarchy (issue #298)",
+      "link": "https://github.com/opengeospatial/ogcapi-common/issues/298"
     }
   ],
   "scope": "ogc-dimensions",
@@ -31,7 +47,7 @@
         "ogc.api.records.core"
       ],
       "tags": ["dimensions", "records", "datacube", "collection"],
-      "abstract": "A Records catalogue whose items are dimension members. Extends collection metadata with a generator object (from STAC Datacube Extension) that drives algorithmic member production."
+      "abstract": "A Records catalogue whose items are dimension members. Exposes a full provider object (config, parameters, hierarchy, language support) at the collection level, and a slim provider reference in cube:dimensions for STAC clients. Follow provider.href in cube:dimensions to discover capabilities."
     },
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-member",
@@ -95,7 +111,7 @@
         "ogc.api.dimensions.dimension-member"
       ],
       "tags": ["dimensions", "hierarchy", "navigation"],
-      "abstract": "Defines /children and /ancestors endpoints and the ?parent= filter for hierarchical dimension navigation. Supports both leveled (fixed-depth) and recursive (arbitrary-depth) tree structures."
+      "abstract": "Defines /children and /ancestors endpoints and the ?parent= filter for hierarchical dimension navigation. /children mirrors the STAC API Children Extension (https://github.com/stac-api-extensions/children) applied to dimension members. ?parent= filter follows OGC API Common #298 pattern. /ancestors is a novel contribution for upward traversal. Supports both leveled (fixed-depth) and recursive (arbitrary-depth) tree structures."
     }
   ]
 }

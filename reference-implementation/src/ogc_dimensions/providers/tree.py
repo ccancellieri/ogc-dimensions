@@ -2,22 +2,22 @@
 
 Two generator types are provided, each encapsulating its own hierarchy strategy:
 
-  StaticTreeGenerator  (type: "static-tree")
+  StaticTreeProvider  (type: "static-tree")
     Recursive strategy: each member carries a ``parent_code`` field.
     /items          → root members (parent_code is None)
     /items?parent=X → delegates to /children (alias)
     /children?parent=X → direct children of X
     /ancestors?member=X → ancestor chain from root to X
 
-  LeveledTreeGenerator  (type: "leveled-tree")
+  LeveledTreeProvider  (type: "leveled-tree")
     Leveled strategy: hierarchy is imposed by named level definitions.
-    Extends StaticTreeGenerator with a ``?level=N`` parameter that filters
+    Extends StaticTreeProvider with a ``?level=N`` parameter that filters
     members to a specific level, mirroring the ``parameters`` object declared
     in each hierarchy level's metadata.
     /items?level=N         → all members at level N
     /items?level=N&parent=X → members at level N that are children of X
 
-Adding a new hierarchy strategy means adding a new generator subclass —
+Adding a new hierarchy strategy means adding a new provider subclass —
 no changes to the spec schema are required.
 """
 
@@ -29,18 +29,18 @@ from dataclasses import dataclass
 from typing import Any
 
 from .base import (
-    DimensionGenerator,
+    DimensionProvider,
     ExtentResult,
     GeneratedMember,
-    GeneratorConfig,
+    ProviderConfig,
     PaginatedResult,
     SearchProtocol,
 )
 
 
 @dataclass(frozen=True)
-class StaticTreeConfig(GeneratorConfig):
-    """Configuration for :class:`StaticTreeGenerator` — no fields (fully data-driven)."""
+class StaticTreeConfig(ProviderConfig):
+    """Configuration for :class:`StaticTreeProvider` — no fields (fully data-driven)."""
 
 # ---------------------------------------------------------------------------
 # Demo dataset: continent → country (2 levels)
@@ -184,12 +184,12 @@ def _paginate_nodes(
     )
 
 
-class StaticTreeGenerator(DimensionGenerator):
+class StaticTreeProvider(DimensionProvider):
     """In-memory recursive tree generator for hierarchical nominal dimensions.
 
     Strategy: recursive — each member carries a ``parent_code`` field.
     The generator itself owns the hierarchy logic: adding a new strategy
-    means adding a new generator subclass, not changing the spec schema.
+    means adding a new provider subclass, not changing the spec schema.
 
     Supports Hierarchical conformance level: ``/children``, ``/ancestors``,
     and ``?parent=`` filter on ``/members``.
@@ -200,11 +200,11 @@ class StaticTreeGenerator(DimensionGenerator):
         self._by_code: dict[str, dict[str, Any]] = {n["code"]: n for n in self._nodes}
 
     # ------------------------------------------------------------------
-    # DimensionGenerator protocol
+    # DimensionProvider protocol
     # ------------------------------------------------------------------
 
     @property
-    def generator_type(self) -> str:
+    def provider_type(self) -> str:
         return "static-tree"
 
     @property
@@ -358,11 +358,11 @@ class StaticTreeGenerator(DimensionGenerator):
             )
 
         raise NotImplementedError(
-            f"StaticTreeGenerator does not support search protocol '{protocol}'."
+            f"StaticTreeProvider does not support search protocol '{protocol}'."
         )
 
 
-class LeveledTreeGenerator(StaticTreeGenerator):
+class LeveledTreeProvider(StaticTreeProvider):
     """In-memory leveled tree generator for hierarchical nominal dimensions.
 
     Strategy: leveled — hierarchy is imposed by named level definitions;
@@ -370,7 +370,7 @@ class LeveledTreeGenerator(StaticTreeGenerator):
     parameter filters members to a specific level, mirroring the
     ``parameters`` object declared in each hierarchy level's metadata.
 
-    Supports all StaticTreeGenerator operations plus level-based filtering::
+    Supports all StaticTreeProvider operations plus level-based filtering::
 
         ?level=0             → all continents (root level)
         ?level=1             → all countries
@@ -382,7 +382,7 @@ class LeveledTreeGenerator(StaticTreeGenerator):
     """
 
     @property
-    def generator_type(self) -> str:
+    def provider_type(self) -> str:
         return "leveled-tree"
 
     def generate(

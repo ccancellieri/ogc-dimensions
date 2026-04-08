@@ -4,7 +4,7 @@ A **Dimension Collection** is a Records catalogue (`itemType: "record"`)
 whose items are dimension members.  It extends the OGC API - Records
 collection with a `cube:dimensions` property containing the dimension
 definition from the STAC Datacube Extension, enriched with the
-ogc-dimensions extensions (`size`, `href`, `generator`, `hierarchy`).
+ogc-dimensions extensions (`size`, `href`, `provider`, `hierarchy`).
 
 ## Conformance
 
@@ -24,12 +24,15 @@ Depends on:
 | `collection.description` | Dimension description |
 | `collection.itemType` | Always `"record"` |
 | `collection.extent` | Temporal or value extent of the dimension |
-| `cube:dimensions` | The dimension definition with generator object |
+| `collection.provider` | Full provider definition (type, config, capabilities) |
+| `cube:dimensions` | Slim provider reference (`{type, href}`) for STAC clients |
 
-## Generator Object
+## Provider Object
 
-The `generator` property within `cube:dimensions` tells clients how
-members are algorithmically produced.  See `generator.json` schema.
+The `provider` property at collection level carries the full provider
+definition: type, config, invertibility, search protocols, and capabilities.
+Within `cube:dimensions`, a slim `provider: {type, href}` reference points
+STAC clients to the collection endpoint for full details.  See `provider.json` schema.
 
 Servers that implement this building block:
 1. Serve the collection at `/collections/{dimensionId}`

@@ -1,8 +1,8 @@
-"""Tests for the unified DailyPeriodGenerator."""
+"""Tests for the unified DailyPeriodProvider."""
 
 import pytest
 
-from ogc_dimensions.generators.daily_period import DailyPeriodConfig, DailyPeriodGenerator
+from ogc_dimensions.providers.daily_period import DailyPeriodConfig, DailyPeriodProvider
 
 
 # ---------------------------------------------------------------------------
@@ -11,17 +11,17 @@ from ogc_dimensions.generators.daily_period import DailyPeriodConfig, DailyPerio
 
 @pytest.fixture
 def dekadal():
-    return DailyPeriodGenerator(period_days=10, scheme="monthly")
+    return DailyPeriodProvider(period_days=10, scheme="monthly")
 
 
 @pytest.fixture
 def pentadal_monthly():
-    return DailyPeriodGenerator(period_days=5, scheme="monthly")
+    return DailyPeriodProvider(period_days=5, scheme="monthly")
 
 
 @pytest.fixture
 def pentadal_annual():
-    return DailyPeriodGenerator(period_days=5, scheme="annual")
+    return DailyPeriodProvider(period_days=5, scheme="annual")
 
 
 # ---------------------------------------------------------------------------
@@ -42,8 +42,8 @@ class TestConfig:
     def test_pentadal_annual_config(self, pentadal_annual):
         assert pentadal_annual.config_as_dict() == {"period_days": 5, "scheme": "annual"}
 
-    def test_generator_type(self, dekadal):
-        assert dekadal.generator_type == "daily-period"
+    def test_provider_type(self, dekadal):
+        assert dekadal.provider_type == "daily-period"
 
     def test_invertible(self, dekadal):
         assert dekadal.invertible is True
@@ -254,20 +254,20 @@ class TestSearch:
 
 class TestAliases:
     def test_dekadal_alias(self):
-        from ogc_dimensions.generators import DekadalGenerator
-        g = DekadalGenerator()
-        assert g.generator_type == "daily-period"
+        from ogc_dimensions.providers import DekadalProvider
+        g = DekadalProvider()
+        assert g.provider_type == "daily-period"
         assert g.config_as_dict() == {"period_days": 10, "scheme": "monthly"}
         assert g.generate("2025-01-01", "2025-12-31").number_matched == 36
 
     def test_pentadal_monthly_alias(self):
-        from ogc_dimensions.generators import PentadalMonthlyGenerator
-        g = PentadalMonthlyGenerator()
+        from ogc_dimensions.providers import PentadalMonthlyProvider
+        g = PentadalMonthlyProvider()
         assert g.config_as_dict() == {"period_days": 5, "scheme": "monthly"}
         assert g.generate("2025-01-01", "2025-12-31").number_matched == 72
 
     def test_pentadal_annual_alias(self):
-        from ogc_dimensions.generators import PentadalAnnualGenerator
-        g = PentadalAnnualGenerator()
+        from ogc_dimensions.providers import PentadalAnnualProvider
+        g = PentadalAnnualProvider()
         assert g.config_as_dict() == {"period_days": 5, "scheme": "annual"}
         assert g.generate("2025-01-01", "2025-12-31").number_matched == 73

@@ -1,20 +1,21 @@
-"""API routes for dimension generators.
+"""API routes for OGC API - Dimensions.
 
-Serves dimension metadata as OGC API - Records collections and dimension
-members as GeoJSON Features (``geometry: null``), following the OGC
-Dimensions Building Blocks profile.
+Serves dimension collections as OGC API - Records and dimension members as
+GeoJSON Features (``geometry: null``), following the OGC Dimensions Building
+Blocks profile (a Records profile).
 
 Endpoints:
   GET  /dimensions                              -- list dimension collections
   GET  /dimensions/conformance                  -- conformance declaration
-  GET  /dimensions/{dimension_id}/members       -- paginated members (FeatureCollection)
+  GET  /dimensions/{dimension_id}               -- dimension collection (full provider definition)
+  GET  /dimensions/{dimension_id}/items         -- paginated members (OGC Records /items)
   GET  /dimensions/{dimension_id}/extent        -- boundaries
-  GET  /dimensions/{dimension_id}/inverse       -- single value inverse
+  GET  /dimensions/{dimension_id}/inverse       -- single value → member mapping
   POST /dimensions/{dimension_id}/inverse       -- batch inverse
   GET  /dimensions/{dimension_id}/search        -- search members
-  GET  /dimensions/{dimension_id}/children      -- direct children of a node
-  GET  /dimensions/{dimension_id}/ancestors     -- ancestor chain for a member
-  GET  /dimensions/{dimension_id}/queryables    -- queryable properties
+  GET  /dimensions/{dimension_id}/children      -- direct children (STAC Children Extension pattern)
+  GET  /dimensions/{dimension_id}/ancestors     -- ancestor chain from root to member
+  GET  /dimensions/{dimension_id}/queryables    -- queryable member properties
 """
 
 from __future__ import annotations
@@ -26,14 +27,14 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from ..generators import (
-    DailyPeriodGenerator,
-    DimensionGenerator,
-    IntegerRangeGenerator,
-    LeveledTreeGenerator,
-    StaticTreeGenerator,
+from ..providers import (
+    DailyPeriodProvider,
+    DimensionProvider,
+    IntegerRangeProvider,
+    LeveledTreeProvider,
+    StaticTreeProvider,
 )
-from ..generators.base import SearchProtocol
+from ..providers.base import SearchProtocol
 
 router = APIRouter()
 
@@ -81,40 +82,40 @@ def _parent_url(request: Request, levels_up: int = 1) -> str:
 
 @dataclass
 class DimensionConfig:
-    """A named dimension backed by a generator."""
-    generator: DimensionGenerator
+    """A named dimension backed by a provider."""
+    provider: DimensionProvider
     description: str = ""
     dimension_type: str = "other"
     extent_min: str = "2024-01-01"
     extent_max: str = "2024-12-31"
 
 
-# Registry of named dimensions — each backed by a generator instance
+# Registry of named dimensions — each backed by a provider instance
 DIMENSIONS: dict[str, DimensionConfig] = {
     "dekadal": DimensionConfig(
-        generator=DailyPeriodGenerator(period_days=10, scheme="monthly"),
+        provider=DailyPeriodProvider(period_days=10, scheme="monthly"),
         description="10-day periods (36/year). Used by FAO ASIS, FEWS NET, TUW-GEO.",
         dimension_type="temporal",
     ),
     "pentadal-monthly": DimensionConfig(
-        generator=DailyPeriodGenerator(period_days=5, scheme="monthly"),
+        provider=DailyPeriodProvider(period_days=5, scheme="monthly"),
         description="5-day periods aligned to months (72/year). Used by CHIRPS, CDT, FAO.",
         dimension_type="temporal",
     ),
     "pentadal-annual": DimensionConfig(
-        generator=DailyPeriodGenerator(period_days=5, scheme="annual"),
+        provider=DailyPeriodProvider(period_days=5, scheme="annual"),
         description="5-day periods aligned to year start (73/year). Used by GPCP, CPC/NOAA.",
         dimension_type="temporal",
     ),
     "integer-range": DimensionConfig(
-        generator=IntegerRangeGenerator(step=100),
+        provider=IntegerRangeProvider(step=100),
         description="Evenly-spaced integer bins (step=100). Elevation bands, percentiles.",
         dimension_type="other",
         extent_min="0",
         extent_max="5000",
     ),
     "world-admin": DimensionConfig(
-        generator=LeveledTreeGenerator(),
+        provider=LeveledTreeProvider(),
         description=(
             "Hierarchical administrative boundaries: 5 continents -> 49 countries. "
             "Demonstrates the Hierarchical conformance level (/children, /ancestors)."
@@ -145,7 +146,7 @@ def _member_to_feature(
     m,
     *,
     dim_type: str = "other",
-    gen: DimensionGenerator | None = None,
+    gen: DimensionProvider | None = None,
     dim_base_url: str | None = None,
 ) -> dict[str, Any]:
     """Convert a ``GeneratedMember`` to a GeoJSON Feature (OGC Record).
@@ -240,7 +241,7 @@ def _ancestor_dict_to_feature(
     node: dict[str, Any],
     *,
     dim_type: str = "other",
-    gen: DimensionGenerator | None = None,
+    gen: DimensionProvider | None = None,
     dim_base_url: str | None = None,
 ) -> dict[str, Any]:
     """Convert a raw ancestor dict (from ``gen.ancestors()``) to a GeoJSON Feature."""
@@ -314,42 +315,63 @@ def _dimension_to_collection(
     dim_id: str, cfg: DimensionConfig, base_url: str,
 ) -> dict[str, Any]:
     """Convert a DimensionConfig to an OGC Records collection object."""
-    gen = cfg.generator
+    gen = cfg.provider
+    dim_url = f"{base_url}/{dim_id}"
+    # Full provider definition (lives at the dimension collection level)
+    provider: dict[str, Any] = {
+        "type": gen.provider_type,
+        "config": gen.config_as_dict(),
+        "invertible": gen.invertible,
+        "hierarchical": gen.hierarchical,
+        "search": [s.value for s in gen.search_protocols],
+    }
+    if hasattr(gen, "language_support") and gen.language_support:
+        provider["language_support"] = gen.language_support
+
+    # Conformance URIs — core always present; add optional capabilities
+    conforms_to = [
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+    ]
+    if gen.invertible:
+        conforms_to.append("http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse")
+    if gen.hierarchical:
+        conforms_to.append("http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-hierarchical")
+
+    # Links — always include self, items, queryables; add capability links conditionally
+    links: list[dict[str, str]] = [
+        {"rel": "self", "href": dim_url, "type": "application/json"},
+        {"rel": "items", "href": f"{dim_url}/items", "type": "application/geo+json", "title": "Paginated members"},
+        {"rel": "queryables", "href": f"{dim_url}/queryables", "type": "application/schema+json", "title": "Queryable and sortable member properties"},
+    ]
+    if gen.invertible:
+        links.append({"rel": "inverse", "href": f"{dim_url}/inverse", "type": "application/json", "title": "Value-to-member inverse mapping"})
+    if gen.hierarchical:
+        links.append({"rel": "children", "href": f"{dim_url}/children", "type": "application/geo+json", "title": "Direct children of a hierarchy node"})
+        links.append({"rel": "ancestors", "href": f"{dim_url}/ancestors", "type": "application/json", "title": "Ancestor chain from root to member"})
+
     collection: dict[str, Any] = {
         "id": dim_id,
         "title": dim_id.replace("-", " ").title(),
         "description": cfg.description,
         "itemType": "record",
+        # Full provider definition at collection level
+        "provider": provider,
+        "conformsTo": conforms_to,
+        # Slim cube:dimensions reference for STAC clients
         "cube:dimensions": {
             dim_id: {
                 "type": cfg.dimension_type,
-                "generator": {
-                    "type": gen.generator_type,
-                    "config": gen.config_as_dict(),
-                    "invertible": gen.invertible,
-                    "capabilities": [c.value for c in gen.capabilities],
-                    "search_protocols": [s.value for s in gen.search_protocols],
+                "provider": {
+                    "type": gen.provider_type,
+                    "href": dim_url,
                 },
+                "href": f"{dim_url}/items",
             }
         },
-        "links": [
-            {
-                "rel": "self",
-                "href": f"{base_url}/{dim_id}",
-                "type": "application/json",
-            },
-            {
-                "rel": "items",
-                "href": f"{base_url}/{dim_id}/members",
-                "type": "application/geo+json",
-            },
-            {
-                "rel": "queryables",
-                "href": f"{base_url}/{dim_id}/queryables",
-                "type": "application/schema+json",
-                "title": "Queryable and sortable member properties",
-            },
-        ],
+        "links": links,
     }
 
     # Add extent for temporal dimensions
@@ -399,7 +421,7 @@ async def queryables(
     listing the output fields that clients may use as filter or sort targets.
     """
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     self_url = _self_url(request)
 
     output_schema: dict[str, Any] = {}
@@ -449,27 +471,28 @@ async def queryables(
     }
 
 
-@router.get("/{dimension_id}/members")
-async def generate(
+@router.get("/{dimension_id}/items")
+async def items(
     request: Request,
     dimension_id: str,
     extent_min: str | None = Query(None, description="Extent minimum (defaults to dimension config)"),
     extent_max: str | None = Query(None, description="Extent maximum (defaults to dimension config)"),
     limit: int = Query(100, ge=1, le=10000, description="Max items per page"),
     offset: int = Query(0, ge=0, description="Items to skip"),
-    parent: str | None = Query(None, description="Filter to direct children of this member code (Hierarchical conformance)"),
+    parent: str | None = Query(None, description="Filter to direct children of this member code (Hierarchical conformance, cf. OGC Common #298)"),
     level: int | None = Query(None, description="Hierarchy level filter (leveled strategy)"),
     language: str | None = Query(None, description="RFC 5646 Language-Tag selecting label language and sort collation."),
     sort_by: str | None = Query(None, description="Output field to sort members by (e.g. 'code', 'label', 'rank')."),
     sort_dir: str = Query("asc", description="Sort direction: 'asc' (default) or 'desc'."),
 ):
-    """Generate paginated dimension members as an OGC Records FeatureCollection.
+    """Paginated dimension members as an OGC Records FeatureCollection.
 
+    Standard Records /items endpoint backed by the dimension provider.
     Each member is a GeoJSON Feature with ``geometry: null`` and
     ``dimension:*`` properties per the dimension-member building block.
     """
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
 
@@ -484,10 +507,11 @@ async def generate(
         sort_dir=sort_dir,
     )
 
-    # Build member-level link context for hierarchical dimensions
+    # Build member-level link context for hierarchical dimensions.
+    # dim_base is the collection URL (one level up from /items).
     emit_links = gen.hierarchical
     link_gen = gen if emit_links else None
-    dim_base = _parent_url(request) if emit_links else None
+    dim_base = _parent_url(request, levels_up=1) if emit_links else None
 
     features = [
         _member_to_feature(m, dim_type=cfg.dimension_type, gen=link_gen, dim_base_url=dim_base)
@@ -539,7 +563,7 @@ async def extent(
 ):
     """Return dimension boundaries in native and standard representations."""
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
 
@@ -547,7 +571,7 @@ async def extent(
 
     return {
         "dimension": dimension_id,
-        "generator": gen.generator_type,
+        "provider": gen.provider_type,
         "native": {"min": result.native_min, "max": result.native_max},
         "standard": {"min": result.standard_min, "max": result.standard_max},
         "size": result.size,
@@ -561,11 +585,11 @@ async def inverse(
 ):
     """Map a value to its dimension member (single value)."""
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     if not gen.invertible:
         raise HTTPException(
             status_code=501,
-            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            detail=f"Dimension '{dimension_id}' (provider: {gen.provider_type}) "
             f"is not invertible and does not support inverse.",
         )
 
@@ -597,11 +621,11 @@ async def inverse_batch(
 ):
     """Batch inverse for pipeline operations."""
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     if not gen.invertible:
         raise HTTPException(
             status_code=501,
-            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            detail=f"Dimension '{dimension_id}' (provider: {gen.provider_type}) "
             f"is not invertible.",
         )
 
@@ -609,7 +633,7 @@ async def inverse_batch(
 
     return {
         "dimension": dimension_id,
-        "generator": gen.generator_type,
+        "provider": gen.provider_type,
         "count": len(results),
         "results": [
             {
@@ -641,7 +665,7 @@ async def search(
     Returns an OGC Records FeatureCollection.
     """
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
 
@@ -668,7 +692,7 @@ async def search(
     if protocol not in gen.search_protocols:
         raise HTTPException(
             status_code=501,
-            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            detail=f"Dimension '{dimension_id}' (provider: {gen.provider_type}) "
             f"does not support search protocol '{protocol.value}'. "
             f"Supported: {[s.value for s in gen.search_protocols]}",
         )
@@ -710,11 +734,11 @@ async def children(
     Requires Hierarchical conformance level.
     """
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     if not gen.hierarchical:
         raise HTTPException(
             status_code=501,
-            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            detail=f"Dimension '{dimension_id}' (provider: {gen.provider_type}) "
             "does not support Hierarchical operations (/children, /ancestors).",
         )
 
@@ -769,11 +793,11 @@ async def ancestors(
     Requires Hierarchical conformance level.
     """
     cfg = _get_dimension(dimension_id)
-    gen = cfg.generator
+    gen = cfg.provider
     if not gen.hierarchical:
         raise HTTPException(
             status_code=501,
-            detail=f"Dimension '{dimension_id}' (generator: {gen.generator_type}) "
+            detail=f"Dimension '{dimension_id}' (provider: {gen.provider_type}) "
             "does not support Hierarchical operations (/children, /ancestors).",
         )
 

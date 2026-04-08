@@ -42,8 +42,11 @@ class TestListDimensions:
         r = client.get("/dimensions/")
         data = r.json()
         dek = next(d for d in data["collections"] if d["id"] == "dekadal")
+        # Full provider details at collection level
+        assert dek["provider"]["config"] == {"period_days": 10, "scheme": "monthly"}
+        # Slim provider reference inside cube:dimensions
         cube_dim = dek["cube:dimensions"]["dekadal"]
-        assert cube_dim["generator"]["config"] == {"period_days": 10, "scheme": "monthly"}
+        assert cube_dim["provider"]["type"] == "daily-period"
         assert cube_dim["type"] == "temporal"
 
     def test_collection_has_links(self):
@@ -63,9 +66,9 @@ class TestListDimensions:
         assert "temporal" in dek["extent"]
 
 
-class TestMembers:
+class TestItems:
     def test_feature_collection_envelope(self):
-        r = client.get("/dimensions/dekadal/members?limit=3")
+        r = client.get("/dimensions/dekadal/items?limit=3")
         assert r.status_code == 200
         data = r.json()
         assert data["type"] == "FeatureCollection"
@@ -74,7 +77,7 @@ class TestMembers:
         assert len(data["features"]) == 3
 
     def test_member_is_geojson_feature(self):
-        r = client.get("/dimensions/dekadal/members?limit=1")
+        r = client.get("/dimensions/dekadal/items?limit=1")
         data = r.json()
         feature = data["features"][0]
         assert feature["type"] == "Feature"
@@ -89,12 +92,12 @@ class TestMembers:
         assert props["time"]["interval"] == ["2024-01-01", "2024-01-10"]
 
     def test_sort_dir_desc(self):
-        r = client.get("/dimensions/dekadal/members?limit=1&sort_dir=desc")
+        r = client.get("/dimensions/dekadal/items?limit=1&sort_dir=desc")
         data = r.json()
         assert data["features"][0]["id"] == "2024-K36"
 
     def test_pagination_links(self):
-        r = client.get("/dimensions/dekadal/members?limit=10&offset=0")
+        r = client.get("/dimensions/dekadal/items?limit=10&offset=0")
         data = r.json()
         rels = [l["rel"] for l in data["links"]]
         assert "self" in rels
@@ -102,7 +105,7 @@ class TestMembers:
         assert "collection" in rels
 
     def test_hierarchical_members_have_links(self):
-        r = client.get("/dimensions/world-admin/members")
+        r = client.get("/dimensions/world-admin/items")
         data = r.json()
         feature = data["features"][0]
         assert "links" in feature
@@ -112,7 +115,7 @@ class TestMembers:
         assert "self" in rels
 
     def test_hierarchical_member_properties(self):
-        r = client.get("/dimensions/world-admin/members")
+        r = client.get("/dimensions/world-admin/items")
         data = r.json()
         feature = data["features"][0]
         props = feature["properties"]
@@ -121,12 +124,12 @@ class TestMembers:
         assert props["dimension:has_children"] is True
 
     def test_language_header(self):
-        r = client.get("/dimensions/world-admin/members?language=fr")
+        r = client.get("/dimensions/world-admin/items?language=fr")
         assert r.status_code == 200
         assert r.headers.get("content-language") == "fr"
 
     def test_integer_range_member(self):
-        r = client.get("/dimensions/integer-range/members?limit=1")
+        r = client.get("/dimensions/integer-range/items?limit=1")
         data = r.json()
         feature = data["features"][0]
         props = feature["properties"]

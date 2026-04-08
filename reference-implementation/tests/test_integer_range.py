@@ -1,13 +1,13 @@
-"""Tests for IntegerRangeGenerator."""
+"""Tests for IntegerRangeProvider."""
 
 import pytest
 
-from ogc_dimensions.generators.integer_range import IntegerRangeConfig, IntegerRangeGenerator
+from ogc_dimensions.providers.integer_range import IntegerRangeConfig, IntegerRangeProvider
 
 
 @pytest.fixture
 def gen():
-    return IntegerRangeGenerator(step=100)
+    return IntegerRangeProvider(step=100)
 
 
 class TestConfig:
@@ -16,8 +16,8 @@ class TestConfig:
         assert gen.config.step == 100
         assert gen.config_as_dict() == {"step": 100}
 
-    def test_generator_type(self, gen):
-        assert gen.generator_type == "integer-range"
+    def test_provider_type(self, gen):
+        assert gen.provider_type == "integer-range"
 
 
 class TestGenerate:
@@ -46,7 +46,7 @@ class TestGenerate:
         assert desc.members[0].code == "5000"
 
     def test_step_1(self):
-        g = IntegerRangeGenerator(step=1)
+        g = IntegerRangeProvider(step=1)
         r = g.generate(0, 9)
         assert r.number_matched == 10
 

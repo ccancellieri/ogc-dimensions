@@ -103,12 +103,16 @@
     },
     "links": {
       "type": "array",
+      "description": "Hypermedia links for this member. Standard link relations per OGC API - Records: 'self' (this member), 'collection' (parent dimension collection), 'parent' (parent member in hierarchy — same as dimension:parent property, as a link), 'children' (paginated direct children — mirrors STAC API Children Extension applied to members), 'ancestors' (ancestor chain from root to this member).",
       "items": {
         "type": "object",
         "required": ["href", "rel"],
         "properties": {
           "href": {"type": "string", "format": "uri-reference"},
-          "rel": {"type": "string"},
+          "rel": {
+            "type": "string",
+            "description": "Link relation type. Well-known values: 'self', 'collection', 'parent', 'children', 'ancestors', 'prev', 'next'."
+          },
           "type": {"type": "string"},
           "title": {"type": "string"}
         }

@@ -32,36 +32,10 @@
         "step": null,
         "unit": "pentad",
         "size": 1800,
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-monthly/members?limit=5",
-        "generator": {
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-monthly/items?limit=5",
+        "provider": {
           "type": "daily-period",
-          "config": {
-            "period_days": 5,
-            "scheme": "monthly"
-          },
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "sort_dir": {
-                "type": "string",
-                "enum": ["asc", "desc"],
-                "default": "asc",
-                "description": "Sort direction."
-              }
-            }
-          },
-          "output": {
-            "type": "object",
-            "required": ["code", "start", "end"],
-            "properties": {
-              "code":  {"type": "string",  "description": "YYYY-Pnn (nn=01..72). 'P' prefix denotes pentadal (monthly scheme, 5-day period)."},
-              "start": {"type": "string",  "format": "date", "description": "First day of the pentad (inclusive)."},
-              "end":   {"type": "string",  "format": "date", "description": "Last day of the pentad (inclusive). P6 absorbs remaining days (26\u2013end-of-month)."}
-            }
-          },
-          "invertible": true,
-          "search": ["exact", "range"],
-          "on_invalid": "reject"
+          "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-monthly"
         }
       }
     },
@@ -107,36 +81,10 @@
         "step": null,
         "unit": "pentad",
         "size": 3358,
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-annual/members?limit=5",
-        "generator": {
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-annual/items?limit=5",
+        "provider": {
           "type": "daily-period",
-          "config": {
-            "period_days": 5,
-            "scheme": "annual"
-          },
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "sort_dir": {
-                "type": "string",
-                "enum": ["asc", "desc"],
-                "default": "asc",
-                "description": "Sort direction."
-              }
-            }
-          },
-          "output": {
-            "type": "object",
-            "required": ["code", "start", "end"],
-            "properties": {
-              "code":  {"type": "string",  "description": "YYYY-Ann (nn=01..73). 'A' prefix denotes annual scheme."},
-              "start": {"type": "string",  "format": "date", "description": "First day of the pentad (inclusive)."},
-              "end":   {"type": "string",  "format": "date", "description": "Last day of the pentad (inclusive). A73 absorbs remaining days (5 or 6 in leap year)."}
-            }
-          },
-          "invertible": true,
-          "search": ["exact", "range"],
-          "on_invalid": "reject"
+          "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-annual"
         }
       }
     },

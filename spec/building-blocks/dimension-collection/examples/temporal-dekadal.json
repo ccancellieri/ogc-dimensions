@@ -8,6 +8,19 @@
       "interval": [["1950-01-01T00:00:00Z", "2050-12-31T00:00:00Z"]]
     }
   },
+  "provider": {
+    "type": "daily-period",
+    "config": {"period_days": 10, "scheme": "monthly"},
+    "invertible": true,
+    "search": ["exact", "range"]
+  },
+  "conformsTo": [
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse"
+  ],
   "cube:dimensions": {
     "time": {
       "type": "temporal",
@@ -15,17 +28,15 @@
       "size": 3636,
       "step": null,
       "href": "/collections/temporal-dekadal/items",
-      "generator": {
+      "provider": {
         "type": "daily-period",
-        "parameters": {
-          "period_days": 10,
-          "scheme": "monthly"
-        }
+        "href": "/collections/temporal-dekadal"
       }
     }
   },
   "links": [
     {"href": "/collections/temporal-dekadal", "rel": "self", "type": "application/json"},
-    {"href": "/collections/temporal-dekadal/items", "rel": "items", "type": "application/geo+json"}
+    {"href": "/collections/temporal-dekadal/items", "rel": "items", "type": "application/geo+json"},
+    {"href": "/collections/temporal-dekadal/inverse", "rel": "inverse", "type": "application/json", "title": "Value-to-member inverse mapping"}
   ]
 }

@@ -24,33 +24,50 @@ OGC Testbeds 17-20 ([21-027](https://docs.ogc.org/per/21-027.html), [23-047](htt
 
 ```
 ogc-dimensions/
-├── spec/                     # Formal specification
-│   ├── schema/               # JSON Schema for generator, size, href
-│   │   ├── dimension.json    # Extended dimension schema
-│   │   └── generator.json    # Generator object schema
-│   └── examples/             # Full collection JSON examples
-│       ├── dekadal.json      # Dekadal temporal dimension
-│       ├── pentadal.json     # Pentadal variants
-│       ├── integer-range.json # Elevation bands
-│       └── legacy-bridge.json # Legacy client compatibility
-├── paper/                    # Scientific publication
-│   ├── manuscript.md         # Paper (Markdown source)
-│   ├── figures/              # Diagrams and schematics
-│   └── references.bib        # Bibliography
-├── reference-implementation/  # Reference implementation (pip: ogc-dimensions)
-│   └── src/ogc_dimensions/
-│       ├── generators/       # Python generator algorithms
-│       │   ├── base.py       # Abstract generator protocol
-│       │   ├── dekadal.py    # Dekadal generator
-│       │   ├── pentadal.py   # Pentadal generators (monthly + annual)
-│       │   └── integer_range.py  # Integer range generator
-│       ├── api/              # FastAPI application
-│       │   ├── app.py        # API entry point
-│       │   └── routes.py     # /members, /extent, /inverse, /search
-│       └── data/             # Sample datasets
-├── docs/                     # GitHub Pages documentation
+├── spec/                         # Formal specification
+│   ├── schema/                   # JSON Schema for extended cube:dimensions fields
+│   │   ├── dimension.json        # Extended dimension schema (size, href, slim provider)
+│   │   ├── provider.json         # Full provider object schema
+│   │   └── hierarchy.json        # Hierarchy descriptor schema
+│   ├── building-blocks/          # OGC Building Blocks (OGC API - Dimensions profile)
+│   │   ├── bblocks.json          # Building block registry (5 blocks, status: under-development)
+│   │   ├── dimension-collection/ # BB: Records catalogue exposing provider + cube:dimensions
+│   │   ├── dimension-member/     # BB: Record representing a single dimension member
+│   │   ├── dimension-pagination/ # BB: OGC Common Part 2 pagination (numberMatched + next/prev)
+│   │   ├── dimension-inverse/    # BB: /inverse endpoint (value → member mapping)
+│   │   └── dimension-hierarchical/ # BB: /children + /ancestors endpoints + ?parent= filter
+│   └── examples/                 # Full collection JSON examples
+│       ├── dekadal.json          # Dekadal temporal dimension
+│       ├── pentadal.json         # Pentadal variants (monthly 72/year, annual 73/year)
+│       ├── integer-range.json    # Elevation bands
+│       ├── admin-hierarchy.json  # Administrative boundary hierarchy
+│       ├── indicator-tree.json   # FAO indicator catalog (tree generator)
+│       ├── legacy-bridge.json    # Legacy client compatibility
+│       └── RESPONSES.md          # Annotated API response examples
+├── paper/                        # Scientific publication
+│   ├── manuscript.md             # Paper (Markdown source, IMRAD structure)
+│   ├── figures/                  # Diagrams and schematics
+│   └── references.bib            # Bibliography
+├── reference-implementation/     # Reference implementation (pip: ogc-dimensions)
+│   ├── src/ogc_dimensions/
+│   │   ├── generators/           # Python generator algorithms
+│   │   │   ├── base.py           # Abstract generator protocol (DimensionGenerator)
+│   │   │   ├── dekadal.py        # Dekadal generator (36/year, D1-D3 per month)
+│   │   │   ├── pentadal.py       # Pentadal generators (monthly 72/year + annual 73/year)
+│   │   │   ├── daily_period.py   # Generic daily-period generator
+│   │   │   ├── integer_range.py  # Integer range generator (elevation, indices)
+│   │   │   └── tree.py           # Tree/hierarchy generator (admin boundaries, indicator catalogs)
+│   │   └── api/                  # FastAPI application
+│   │       ├── app.py            # API entry point + dimension registry
+│   │       └── routes.py         # All endpoints (see API Surface below)
+│   └── tests/                    # pytest test suite
+│       ├── test_api.py           # Integration tests (all endpoints)
+│       ├── test_daily_period.py  # Daily period generator unit tests
+│       ├── test_integer_range.py # Integer range generator unit tests
+│       └── test_tree.py          # Tree generator unit tests
+├── docs/                         # GitHub Pages documentation
 ├── CHANGELOG.md
-├── LICENSE                   # Apache-2.0
+├── LICENSE                       # Apache-2.0
 └── README.md
 ```
 
@@ -76,20 +93,37 @@ Then explore:
 # List all registered dimensions
 curl "http://localhost:8000/dimensions"
 
+# OGC API conformance declaration
+curl "http://localhost:8000/dimensions/conformance"
+
+# Queryable properties for a dimension
+curl "http://localhost:8000/dimensions/dekadal/queryables"
+
 # Generate dekadal members for 2024
-curl "http://localhost:8000/dimensions/dekadal/members?limit=36"
+curl "http://localhost:8000/dimensions/dekadal/items?limit=36"
 
 # Generate pentadal-monthly members (72/year, CHIRPS/FAO)
-curl "http://localhost:8000/dimensions/pentadal-monthly/members?limit=12"
+curl "http://localhost:8000/dimensions/pentadal-monthly/items?limit=12"
 
 # Generate pentadal-annual members (73/year, GPCP/NOAA)
-curl "http://localhost:8000/dimensions/pentadal-annual/members?limit=10"
+curl "http://localhost:8000/dimensions/pentadal-annual/items?limit=10"
 
 # Inverse: what dekad does January 15 belong to?
 curl "http://localhost:8000/dimensions/dekadal/inverse?value=2024-01-15"
 
+# Inverse batch (POST): multiple values at once
+curl -X POST "http://localhost:8000/dimensions/dekadal/inverse" \
+  -H "Content-Type: application/json" \
+  -d '{"values": ["2024-01-15", "2024-03-25", "2024-12-31"]}'
+
 # Search: all dekads matching a pattern
 curl "http://localhost:8000/dimensions/dekadal/search?like=2024-K*"
+
+# Hierarchical: children of an admin boundary node
+curl "http://localhost:8000/dimensions/admin/children?parent=ITA"
+
+# Hierarchical: ancestors of a leaf node
+curl "http://localhost:8000/dimensions/admin/ancestors?member=ITA.01.001"
 ```
 
 ## Live Demo
@@ -104,16 +138,16 @@ A dekadal dimension has 36 members per year. With `limit=5`, a client paginates 
 
 ```bash
 # Page 1: first 5 dekads of 2024
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5"
 # → numberMatched: 36, numberReturned: 5
 # → links: [self, next → offset=5]
 
 # Page 2: follow the "next" link
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5&offset=5"
 # → links: [self, next → offset=10, prev → offset=0]
 
 # Last page: offset=35
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&offset=35"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5&offset=35"
 # → numberReturned: 1, links: [self, prev → offset=30]
 ```
 
@@ -124,13 +158,13 @@ curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/mem
 curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/"
 
 # Pentadal-monthly (72/year, CHIRPS/FAO)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/members?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/items?limit=5"
 
 # Pentadal-annual (73/year, GPCP/NOAA)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/members?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/items?limit=5"
 
 # Integer range (elevation bands, step=100m)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/members?limit=5"
+curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/items?limit=5"
 ```
 
 ### Bijective inversion
@@ -160,7 +194,7 @@ curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/sea
 
 ### STAC Collection integration
 
-The `href` property in a STAC collection points directly to the generator's paginated endpoint. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete collection example where:
+The `href` property in a STAC collection points directly to the generator's paginated `/items` endpoint. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete collection example where:
 
 ```json
 {
@@ -169,7 +203,7 @@ The `href` property in a STAC collection points directly to the generator's pagi
       "type": "temporal",
       "generator": { "type": "dekadal", "invertible": true },
       "size": 900,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5"
     }
   }
 }
@@ -179,15 +213,32 @@ Legacy clients follow `href` and see standard paginated JSON. Generator-aware cl
 
 The reference implementation is deployed on the FAO Agro-Informatics Platform (Google Cloud Run) as a pip-installable FastAPI extension. The `ogc-dimensions` package is mounted alongside the production STAC catalog services with no code duplication.
 
+## API Surface
+
+All endpoints are mounted under a configurable prefix (default `/dimensions`).
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | List all registered dimensions with generator metadata |
+| `/conformance` | GET | OGC API conformance classes |
+| `/{id}/queryables` | GET | JSON Schema of queryable member properties |
+| `/{id}/items` | GET | Paginated dimension members (OGC Records FeatureCollection) |
+| `/{id}/extent` | GET | Spatial + temporal extent of the dimension |
+| `/{id}/inverse` | GET | Value → member mapping (bijective inversion) |
+| `/{id}/inverse` | POST | Batch value → member mapping |
+| `/{id}/search` | GET | Member search: `exact=`, `min=`/`max=`, `like=` |
+| `/{id}/children` | GET | Hierarchical children of a node (`?parent=`) |
+| `/{id}/ancestors` | GET | Ancestor chain of a member node |
+
 ## Conformance Levels
 
 | Level | Capabilities | Requirement |
 |---|---|---|
-| **Basic** | `/members` + `/extent` | All generators MUST support |
-| **Invertible** | + `/inverse` | Enables ingestion validation |
+| **Basic** | `/items` + `/extent` + `/conformance` + `/queryables` | All generators MUST support |
+| **Invertible** | + `/inverse` (GET + POST batch) | Enables ingestion validation |
 | **Searchable** | + `/search` (exact, range, like) | SHOULD support |
-| **Similarity** | + `/search` (vector) | MAY support (AI/ML) |
-| **Intelligent** | + `/embed` (member → vector), `/project` (2D/3D projection) | Future extension |
+| **Hierarchical** | + `/children` + `/ancestors` + `?parent=` filter | For tree-structured dimensions |
+| **Similarity** | + `/search` (vector embedding) | MAY support (AI/ML) |
 
 ## Standardization Pathway
 

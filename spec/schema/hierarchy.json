@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/hierarchy.json",
   "title": "Dimension Hierarchy",
-  "description": "Describes the tree structure of a hierarchical dimension, such as administrative boundaries or coded indicator trees. The generator type determines how hierarchy operations (/children, /ancestors, ?parent=) are implemented — the hierarchy object is purely descriptive metadata for clients. 'levels' is present when the generator uses a leveled strategy (hierarchy imposed by named level definitions). 'parent_property' is present when the generator uses a recursive strategy (each member carries a parent reference). Both may be absent for custom generators that encode hierarchy differently. Navigation: when the generator declares navigable:true and a client passes ?links=true, each member in a /members or /children response MAY include per-member navigation links (rel:children for non-leaf members, rel:ancestors). By default, member-level links are suppressed to minimize response size; response-level pagination links (self, next, prev) are always included.",
+  "description": "Describes the tree structure of a hierarchical dimension, such as administrative boundaries or coded indicator trees. The provider type determines how hierarchy operations (/children, /ancestors, ?parent=) are implemented — the hierarchy object is purely descriptive metadata for clients. 'levels' is present when the provider uses a leveled strategy (hierarchy imposed by named level definitions). 'parent_property' is present when the provider uses a recursive strategy (each member carries a parent reference). Both may be absent for custom providers that encode hierarchy differently. Navigation: when the provider declares navigable:true and a client passes ?links=true, each member in a /items or /children response MAY include per-member navigation links (rel:children for non-leaf members, rel:ancestors). By default, member-level links are suppressed to minimize response size; response-level pagination links (self, next, prev) are always included.",
   "type": "object",
   "properties": {
     "strategy": {
@@ -13,7 +13,7 @@
     "levels": {
       "type": "array",
       "minItems": 1,
-      "description": "Ordered list of hierarchy levels, from coarsest (index 0) to finest. Present when the generator uses a leveled strategy. Each level specifies the generator parameters that select its members, the output field that serves as the member ID, and the output field that carries the cross-level parent reference.",
+      "description": "Ordered list of hierarchy levels, from coarsest (index 0) to finest. Present when the provider uses a leveled strategy. Each level specifies the provider parameters that select its members, the output field that serves as the member ID, and the output field that carries the cross-level parent reference.",
       "items": {
         "type": "object",
         "required": ["id", "label"],
@@ -36,7 +36,7 @@
           "size": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of distinct members at this level. If omitted, clients retrieve count from the generator's /extent endpoint."
+            "description": "Number of distinct members at this level. If omitted, clients retrieve count from the provider's extent."
           },
           "parent_level": {
             "type": "string",
@@ -44,14 +44,14 @@
           },
           "member_id_property": {
             "type": "string",
-            "description": "The property in the generator's output object that uniquely identifies members at this level. Defaults to 'code' if omitted."
+            "description": "The property in the provider's output object that uniquely identifies members at this level. Defaults to 'code' if omitted."
           },
           "parent_id_property": {
             "type": "string",
-            "description": "The property in the generator's output object that holds the identifier of the parent member (from the parent level). Required when parent_level is set."
+            "description": "The property in the provider's output object that holds the identifier of the parent member (from the parent level). Required when parent_level is set."
           },
           "parameters": {
-            "description": "Generator parameters that, when passed to the /members endpoint, produce only members belonging to this level. The backend-agnostic generalization of a SQL condition or CQL filter.",
+            "description": "Provider parameters that, when passed to the /items endpoint, produce only members belonging to this level. The backend-agnostic generalization of a SQL condition or CQL filter.",
             "type": "object"
           },
           "href": {
@@ -64,16 +64,16 @@
     },
     "parent_property": {
       "type": "string",
-      "description": "The property in the generator's output schema that holds the parent member's code. Null for root members. Present when the generator uses a recursive strategy. Corresponds to skos:broader in SKOS vocabularies."
+      "description": "The property in the provider's output schema that holds the parent member's code. Null for root members. Present when the provider uses a recursive strategy. Corresponds to skos:broader in SKOS vocabularies."
     },
     "root_filter": {
       "type": "string",
-      "description": "Optional generator parameter expression that selects root (top-level) members when passed to /members. Used with recursive generators. If omitted, root members are those whose parent_property is null or absent."
+      "description": "Optional provider parameter expression that selects root (top-level) members when passed to /items. Used with recursive providers. If omitted, root members are those whose parent_property is null or absent."
     },
     "depth": {
       "type": "integer",
       "minimum": 1,
-      "description": "Optional maximum depth of the tree. Informational; generators MAY enforce this limit."
+      "description": "Optional maximum depth of the tree. Informational; providers MAY enforce this limit."
     }
   }
 }

@@ -1,8 +1,8 @@
 """OGC Dimensions Reference Implementation API.
 
-FastAPI application demonstrating the generator specification:
+FastAPI application demonstrating the OGC Dimensions specification:
   /dimensions                              -- list registered dimensions
-  /dimensions/{dimension_id}/members      -- paginated member generation
+  /dimensions/{dimension_id}/items         -- paginated members (OGC Records /items)
   /dimensions/{dimension_id}/extent        -- dimension boundaries
   /dimensions/{dimension_id}/inverse       -- value-to-coordinate mapping
   /dimensions/{dimension_id}/search        -- find members by query

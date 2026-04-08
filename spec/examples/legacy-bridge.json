@@ -9,21 +9,13 @@
         "2000-01-01T00:00:00Z",
         "2024-12-31T23:59:59Z"
       ],
-      "generator": {
+      "provider": {
         "type": "daily-period",
-        "config": {
-          "period_days": 10,
-          "scheme": "monthly"
-        },
-        "output": {
-          "type": "string",
-          "format": "date"
-        },
-        "invertible": true
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal"
       },
       "step": null,
       "size": 900,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5&format=datetime"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5&format=datetime"
     }
   }
 }

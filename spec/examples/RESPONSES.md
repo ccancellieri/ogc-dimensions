@@ -31,7 +31,8 @@ and paginated endpoints return `FeatureCollection` envelopes.
 ## List Dimensions — `/dimensions`
 
 Each dimension is an OGC Records collection with `itemType: "record"` and a
-`cube:dimensions` object carrying the generator definition.
+`cube:dimensions` object carrying a slim `provider` reference. Full provider
+details (type, config, capabilities) live at the dimension collection endpoint.
 
 ```json
 {
@@ -46,22 +47,36 @@ Each dimension is an OGC Records collection with `itemType: "record"` and a
           "interval": [["2024-01-01T00:00:00Z", "2024-12-31T00:00:00Z"]]
         }
       },
+      "provider": {
+        "type": "daily-period",
+        "config": {"period_days": 10, "scheme": "monthly"},
+        "invertible": true,
+        "capabilities": ["basic", "invertible", "searchable"],
+        "search_protocols": ["exact", "range"]
+      },
+      "conformsTo": [
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+        "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse"
+      ],
       "cube:dimensions": {
         "dekadal": {
           "type": "temporal",
-          "generator": {
+          "size": 36,
+          "href": ".../dimensions/dekadal/items",
+          "provider": {
             "type": "daily-period",
-            "config": {"period_days": 10, "scheme": "monthly"},
-            "invertible": true,
-            "capabilities": ["basic", "invertible", "searchable"],
-            "search_protocols": ["exact", "range"]
+            "href": ".../dimensions/dekadal"
           }
         }
       },
       "links": [
         {"rel": "self", "href": ".../dimensions/dekadal", "type": "application/json"},
-        {"rel": "items", "href": ".../dimensions/dekadal/members", "type": "application/geo+json"},
-        {"rel": "queryables", "href": ".../dimensions/dekadal/queryables", "type": "application/schema+json"}
+        {"rel": "items", "href": ".../dimensions/dekadal/items", "type": "application/geo+json"},
+        {"rel": "queryables", "href": ".../dimensions/dekadal/queryables", "type": "application/schema+json"},
+        {"rel": "inverse", "href": ".../dimensions/dekadal/inverse", "type": "application/json", "title": "Value-to-member inverse mapping"}
       ]
     }
   ]
@@ -70,7 +85,7 @@ Each dimension is an OGC Records collection with `itemType: "record"` and a
 
 ---
 
-## dekadal — `/members`
+## dekadal — `/items`
 
 Paginated FeatureCollection of dimension members. Each member is a GeoJSON
 Feature with `geometry: null` and `dimension:*` namespaced properties.
@@ -128,16 +143,16 @@ Feature with `geometry: null` and `dimension:*` namespaced properties.
     }
   ],
   "links": [
-    {"rel": "self", "href": ".../dekadal/members?limit=3&offset=0", "type": "application/geo+json"},
+    {"rel": "self", "href": ".../dekadal/items?limit=3&offset=0", "type": "application/geo+json"},
     {"rel": "collection", "href": ".../dekadal", "type": "application/json"},
-    {"rel": "next", "href": ".../dekadal/members?limit=3&offset=3", "type": "application/geo+json"}
+    {"rel": "next", "href": ".../dekadal/items?limit=3&offset=3", "type": "application/geo+json"}
   ]
 }
 ```
 
 ---
 
-## world-admin — `/members` (hierarchical, root level)
+## world-admin — `/items` (hierarchical, root level)
 
 Root members (continents) with hierarchy properties and navigation links.
 
@@ -170,7 +185,7 @@ Root members (continents) with hierarchy properties and navigation links.
     }
   ],
   "links": [
-    {"rel": "self", "href": ".../world-admin/members?limit=100&offset=0", "type": "application/geo+json"},
+    {"rel": "self", "href": ".../world-admin/items?limit=100&offset=0", "type": "application/geo+json"},
     {"rel": "collection", "href": ".../world-admin", "type": "application/json"}
   ]
 }
@@ -269,7 +284,7 @@ Ancestor chain from root to Kenya (inclusive), returned as a FeatureCollection.
 
 ---
 
-## integer-range — `/members`
+## integer-range — `/items`
 
 Integer range members with `dimension:start` and `dimension:end` bounds.
 
@@ -309,9 +324,9 @@ Integer range members with `dimension:start` and `dimension:end` bounds.
     }
   ],
   "links": [
-    {"rel": "self", "href": ".../integer-range/members?limit=3&offset=0", "type": "application/geo+json"},
+    {"rel": "self", "href": ".../integer-range/items?limit=3&offset=0", "type": "application/geo+json"},
     {"rel": "collection", "href": ".../integer-range", "type": "application/json"},
-    {"rel": "next", "href": ".../integer-range/members?limit=3&offset=3", "type": "application/geo+json"}
+    {"rel": "next", "href": ".../integer-range/items?limit=3&offset=3", "type": "application/geo+json"}
   ]
 }
 ```
@@ -355,7 +370,6 @@ Search results also use the FeatureCollection envelope.
 ## Live endpoints
 
 - Swagger UI: https://data.review.fao.org/geospatial/v2/api/tools/docs
-- Members: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/members?limit=5
-- Extent: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/extent
+- Items: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5
 - Inverse: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15
 - Search: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K*

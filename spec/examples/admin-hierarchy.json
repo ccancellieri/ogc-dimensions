@@ -74,7 +74,7 @@
             "parameters": {
               "level": 0
             },
-            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=0&limit=5"
+            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/items?level=0&limit=5"
           },
           {
             "id": "L1",
@@ -87,7 +87,7 @@
             "parameters": {
               "level": 1
             },
-            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=1&limit=5"
+            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/items?level=1&limit=5"
           },
           {
             "id": "L2",
@@ -100,86 +100,15 @@
             "parameters": {
               "level": 2
             },
-            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=2&limit=5"
+            "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/items?level=2&limit=5"
           }
         ]
       },
-      "generator": {
+      "provider": {
         "type": "leveled-tree",
-        "config": {},
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "level": {
-              "type": "integer",
-              "enum": [0, 1, 2],
-              "description": "Hierarchy level to generate members for. 0=Country, 1=ADM1, 2=ADM2."
-            },
-            "parent": {
-              "type": "string",
-              "description": "Filter members to children of this parent member code."
-            },
-            "language": {
-              "type": "string",
-              "description": "RFC 5646 Language-Tag (or Accept-Language priority list) selecting the label language and sort collation. E.g. 'fr', 'ar', 'zh'. Overrides the Accept-Language header. When omitted, the default language (en) is used."
-            },
-            "sort_by": {
-              "type": "string",
-              "enum": ["code", "label"],
-              "description": "Output field to sort members by. 'label' uses locale-aware collation for the negotiated language."
-            },
-            "sort_dir": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "asc",
-              "description": "Sort direction. Used with sort_by."
-            }
-          }
-        },
-        "output": {
-          "type": "object",
-          "properties": {
-            "code": {
-              "type": "string",
-              "description": "Member identifier (iso_code, adm1_code, or adm2_code depending on level)."
-            },
-            "label": {
-              "type": "string",
-              "description": "Human-readable name in the negotiated language (or default language if no language was requested)."
-            },
-            "labels": {
-              "type": "object",
-              "description": "Human-readable names in all available languages. Keys are RFC 5646 Language-Tags. Clients SHOULD prefer labels[negotiated_lang] over the 'label' field.",
-              "additionalProperties": {"type": "string"},
-              "example": {"en": "France", "fr": "France", "ar": "فرنسا", "es": "Francia", "zh": "法国"}
-            },
-            "has_children": {
-              "type": "boolean",
-              "description": "True if this member has at least one child in the hierarchy. Allows tree-rendering clients to show expand controls without a /children round-trip."
-            },
-            "level": {
-              "type": "integer",
-              "description": "Hierarchy level (0=Country, 1=ADM1, 2=ADM2)."
-            },
-            "iso_code": {
-              "type": "string",
-              "description": "ISO 3166-1 alpha-3 country code (present on all levels)."
-            }
-          },
-          "required": ["code", "label", "level"]
-        },
-        "invertible": false,
-        "search": ["exact", "like"],
-        "hierarchical": true,
-        "language_support": [
-          {"code": "en", "name": "English"},
-          {"code": "fr", "name": "Français",  "alternate": "French"},
-          {"code": "ar", "name": "العربية",   "alternate": "Arabic",  "dir": "rtl"},
-          {"code": "es", "name": "Español",   "alternate": "Spanish"},
-          {"code": "zh", "name": "中文",       "alternate": "Chinese"}
-        ]
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin"
       },
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/members?level=0&limit=5"
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/items?level=0&limit=5"
     }
   }
 }

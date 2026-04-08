@@ -31,54 +31,10 @@
       "extent": [0, 5000],
       "unit": "m",
       "size": 51,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands/members?limit=5",
-      "generator": {
+      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands/items?limit=5",
+      "provider": {
         "type": "integer-range",
-        "config": {
-          "step": 100
-        },
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "sort_by": {
-              "type": "string",
-              "enum": ["code", "index"],
-              "description": "Output field to sort members by. 'code' sorts by numeric lower-bound string (default, ascending = lowest band first). 'index' sorts by sequential band index (same ordering as 'code' for ascending)."
-            },
-            "sort_dir": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "asc",
-              "description": "Sort direction. 'desc' returns bands from highest to lowest elevation."
-            }
-          }
-        },
-        "output": {
-          "type": "object",
-          "required": ["code", "index", "lower", "upper"],
-          "properties": {
-            "code": {
-              "type": "string",
-              "description": "String representation of the band's lower bound (e.g. '100' for the 100–199 m band). Used as the member identifier."
-            },
-            "index": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "Zero-based sequential index of this band within the extent (0 for the 0–99 m band, 1 for the 100–199 m band, etc.)."
-            },
-            "lower": {
-              "type": "integer",
-              "description": "Inclusive lower bound of the band in metres (equals lower bound of the containing step interval)."
-            },
-            "upper": {
-              "type": "integer",
-              "description": "Inclusive upper bound of the band in metres (lower + step - 1). For the last band this equals the dimension extent maximum."
-            }
-          }
-        },
-        "invertible": true,
-        "search": ["exact", "range"],
-        "on_invalid": "reject"
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands"
       }
     }
   },

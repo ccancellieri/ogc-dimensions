@@ -16,14 +16,16 @@ Carlo Cancellieri, Food and Agriculture Organization of the United Nations (FAO)
 
 ## Summary
 
-This Change Request Proposal introduces five backwards-compatible extensions to the GeoDataCube dimension metadata model that address dimension member scalability and hierarchical vocabulary navigation -- gaps identified across OGC Testbeds 16-20 and the GDC SWG charter scope.
+This Change Request Proposal introduces seven backwards-compatible extensions to the GeoDataCube dimension metadata model that address dimension member scalability, hierarchical vocabulary navigation, and multilingual metadata -- gaps identified across OGC Testbeds 16-20 and the GDC SWG charter scope.
 
 The proposal adds:
 1. **`size`** -- dimension member count (integer, RECOMMENDED)
 2. **`href`** -- link to paginated member endpoint (URI, OPTIONAL)
-3. **`generator`** -- algorithmic member generation with OpenAPI discovery (object, OPTIONAL)
+3. **`generator`** -- algorithmic member generation with OpenAPI discovery, `config`/`parameters` separation, and `language_support` (object, OPTIONAL)
 4. **`hierarchy`** -- tree structure for hierarchical dimensions (object, OPTIONAL); two strategies: recursive (parent reference in member data) and leveled (hierarchy imposed by named level definitions)
 5. **`nominal` / `ordinal`** -- two new dimension type values for coded dimensions, more precise than the existing `other` fallback
+6. **Multi-language labels** -- `labels` map on members, `language_support` on generators, aligned with STAC Language Extension and OGC API - Records
+7. **Sort order** -- `sort_by` / `sort_dir` standard query parameters with locale-aware collation
 
 These properties are applicable to any dimension type (temporal, spatial, thematic) and follow existing OGC API conventions (Common Part 2 pagination, Features numberMatched/numberReturned, RFC 5988 link relations).
 
@@ -58,27 +60,46 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 
 | Level | Capabilities | Requirement |
 |---|---|---|
-| Basic | /members + /extent | MUST support |
-| Invertible | + /inverse | Invertible generators only |
-| Searchable | + /search (exact, range, like) | SHOULD support |
-| Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
-| Similarity | + /search (vector) | MAY support (future) |
+| Basic | /members + /extent | All dimensions with `generator` |
+| Invertible | + /inverse | When `invertible: true` |
+| Searchable | + /search (exact, range, like); `?language=` on search | SHOULD for non-trivial dims |
+| Hierarchical | + /children + /ancestors; `has_children` on members | When `hierarchy` is declared |
+| Similarity | + /search (vector) | MAY (future) |
+
+Standard cross-level query parameters: `language` (RFC 5646), `sort_by`, `sort_dir`.
 
 ### Generator object schema
 
 ```json
 {
-  "type": "dekadal",
-  "api": "http://www.opengis.net/def/generator/ogc/0/dekadal/openapi.json",
-  "parameters": {},
-  "output": {"type": "object", "properties": {...}},
+  "type": "daily-period",
+  "config": {"period_days": 10, "scheme": "monthly"},
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "sort_dir": {"type": "string", "enum": ["asc", "desc"]}
+    }
+  },
+  "output": {"type": "object", "properties": {"code": {}, "start": {}, "end": {}}},
   "invertible": true,
-  "search": ["exact", "range", "like"],
-  "on_invalid": "reject"
+  "search": ["exact", "range"],
+  "on_invalid": "reject",
+  "language_support": [{"code": "en"}, {"code": "fr"}, {"code": "ar", "dir": "rtl"}]
 }
 ```
 
-Well-known generator types (`dekadal`, `pentadal-monthly`, `pentadal-annual`, `integer-range`) resolve to registered OGC Definition URIs. Custom generators provide their own OpenAPI URI.
+The generator separates **`config`** (static author-set constants fixed at authoring time, e.g. `period_days`, `scheme`) from **`parameters`** (query-time client parameters per JSON Schema 2020-12). The `language_support` array declares available languages using Language Objects aligned with the STAC Language Extension.
+
+Well-known generator types resolve to registered OGC Definition URIs:
+
+| Type | Config | Use case |
+|---|---|---|
+| `daily-period` | `period_days`, `scheme` | Dekadal (10-day), pentadal (5-day), any sub-monthly period |
+| `integer-range` | `step` | Elevation bands, index ranges |
+| `static-tree` | -- | Recursive in-memory hierarchies |
+| `leveled-tree` | -- | Named-level hierarchies (admin boundaries) |
+
+Custom generators use a full URI as the type value and provide their own OpenAPI URI via the `api` field.
 
 ## OGC Records Profile
 
@@ -96,6 +117,17 @@ Five building blocks are packaged for modular adoption:
 - `dimension-hierarchical` -- `/children`, `/ancestors` endpoints with tree navigation links
 
 Source: https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/building-blocks
+
+## Multi-language Support
+
+The proposal aligns with the [STAC Language Extension](https://github.com/stac-extensions/language) and [STAC API Language Extension](https://github.com/stac-api-extensions/language) for multilingual dimension member labels:
+
+- **Collection-level:** `language` / `languages` declarations via the STAC Language Extension (no new schema)
+- **Member-level:** `labels` map (keys = RFC 5646 Language-Tags, values = translated names) alongside default `label` string
+- **Generator-level:** `language_support` array declares available languages; clients use `?language=` or `Accept-Language` header
+- **Sort collation:** `sort_by=label` combined with `?language=fr` applies locale-aware collation (Unicode Collation Algorithm)
+
+This enables administrative boundary names, indicator labels, and classification codes to be served in the user's preferred language through standard HTTP content negotiation.
 
 ## Alignment with SWG approach
 
@@ -128,6 +160,12 @@ The proposed `hierarchy` property with recursive and leveled strategies generali
 ## Prior art
 
 The FAO Agricultural Stress Index System (ASIS) has operated a proprietary paginated dimensions API since 2018, demonstrating the practical need in production agricultural monitoring. The FAO geoid catalog system implements production hierarchical dimensions with FIXED and RECURSIVE strategies, SQL-condition-based level filtering, and paginated children queries -- operational experience that directly informs this proposal. The present proposal standardizes this operational experience using OGC API conventions and aligns with the STAC API Children Extension endpoint contract.
+
+## Related specifications
+
+- [STAC Language Extension](https://github.com/stac-extensions/language) -- collection-level language declaration
+- [STAC API Language Extension](https://github.com/stac-api-extensions/language) -- `?language=` query parameter, `Accept-Language`/`Content-Language` headers
+- [STAC Datacube Extension Issue #36](https://github.com/stac-extensions/datacube/issues/36) -- formal proposal [DRAFT]
 
 ## Requested action
 

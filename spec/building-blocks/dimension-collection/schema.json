@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-collection/schema.json",
   "title": "Dimension Collection",
-  "description": "A Records collection whose items are dimension members. Extends OGC API - Records collection with cube:dimensions property.",
+  "description": "A Records collection whose items are dimension members. Extends OGC API - Records collection with a provider object (full configuration) and a cube:dimensions property (slim reference for STAC clients).",
   "type": "object",
   "required": ["id", "itemType"],
   "properties": {
@@ -49,9 +49,18 @@
         }
       }
     },
+    "provider": {
+      "$ref": "../../schema/provider.json",
+      "description": "Full provider definition for this dimension — config, parameters, output schema, invertible flag, hierarchy structure, language support. This is the authoritative provider description; the slim reference in cube:dimensions.*.provider points here."
+    },
+    "conformsTo": {
+      "type": "array",
+      "items": {"type": "string", "format": "uri"},
+      "description": "OGC conformance classes supported by this dimension collection (e.g. dimension-inverse, dimension-hierarchical)."
+    },
     "cube:dimensions": {
       "type": "object",
-      "description": "Datacube dimension definitions (STAC Datacube Extension + ogc-dimensions extensions).",
+      "description": "Datacube dimension definitions (STAC Datacube Extension + ogc-dimensions extensions). Contains slim provider references — follow provider.href for full details.",
       "additionalProperties": {
         "$ref": "../../schema/dimension.json"
       }

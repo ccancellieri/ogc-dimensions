@@ -1,23 +1,23 @@
-"""Tests for StaticTreeGenerator and LeveledTreeGenerator."""
+"""Tests for StaticTreeProvider and LeveledTreeProvider."""
 
 import pytest
 
-from ogc_dimensions.generators.tree import (
-    LeveledTreeGenerator,
+from ogc_dimensions.providers.tree import (
+    LeveledTreeProvider,
     StaticTreeConfig,
-    StaticTreeGenerator,
+    StaticTreeProvider,
     WORLD_ADMIN_NODES,
 )
 
 
 @pytest.fixture
 def tree():
-    return StaticTreeGenerator()
+    return StaticTreeProvider()
 
 
 @pytest.fixture
 def leveled():
-    return LeveledTreeGenerator()
+    return LeveledTreeProvider()
 
 
 class TestConfig:
@@ -28,9 +28,9 @@ class TestConfig:
     def test_leveled_inherits_config(self, leveled):
         assert isinstance(leveled.config, StaticTreeConfig)
 
-    def test_generator_types(self, tree, leveled):
-        assert tree.generator_type == "static-tree"
-        assert leveled.generator_type == "leveled-tree"
+    def test_provider_types(self, tree, leveled):
+        assert tree.provider_type == "static-tree"
+        assert leveled.provider_type == "leveled-tree"
 
     def test_hierarchical(self, tree):
         assert tree.hierarchical is True

@@ -22,10 +22,10 @@ Depends on:
 | `rel:next` | Link to next page (if more members exist) |
 | `rel:prev` | Link to previous page (if offset > 0) |
 
-## Interaction with Generators
+## Interaction with Providers
 
 For algorithmically generated dimensions, `numberMatched` is computed
-from the generator's extent without materializing all members.  The
+from the provider's extent without materializing all members.  The
 server generates only the requested page (`offset` to `offset + limit`).
 
 For materialized (stored) dimensions, standard SQL pagination applies.

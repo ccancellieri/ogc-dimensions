@@ -1,27 +1,27 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/generator.json",
-  "title": "Dimension Generator",
-  "description": "Algorithmic member generation with machine-discoverable OpenAPI definitions, applicable to any dimension type. A generator exposes up to five capabilities as endpoints: /members (paginated member production), /extent (boundary computation), /inverse (value-to-coordinate mapping; requires invertible:true), /search (query-based member discovery), and the optional hierarchical pair /children + /ancestors (requires Hierarchical conformance level). Capabilities are declared in the generator's OpenAPI specification.",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/provider.json",
+  "title": "Dimension Provider",
+  "description": "Full provider definition for a dimension collection — describes how members are produced or served, applicable to any dimension type. A provider exposes capabilities as standard Records sub-resources: /items (paginated member listing, OGC Records Part 1), /inverse (value-to-member mapping; requires invertible:true), /search (query-based discovery), and the optional hierarchical pair /children + /ancestors (requires Hierarchical conformance level). Capabilities are declared via conformsTo URIs on the collection and via links.",
   "type": "object",
   "required": ["type", "output"],
   "properties": {
     "type": {
       "type": "string",
-      "description": "Generator type identifier. Short identifiers name well-known algorithms maintained by the OGC Naming Authority; full URIs identify custom generators whose OpenAPI definition is given in the 'api' field. Well-known types: 'daily-period' (sub-monthly temporal periods configured by config.period_days and config.scheme — covers dekadal, pentadal, and any fixed-length day period), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). This list is extensible: implementations MAY register additional well-known types through the OGC Naming Authority, and custom generators use a full URI as the type value."
+      "description": "Provider type identifier. Short identifiers name well-known algorithms maintained by the OGC Naming Authority; full URIs identify custom providers whose OpenAPI definition is given in the 'api' field. Well-known types: 'daily-period' (sub-monthly temporal periods configured by config.period_days and config.scheme — covers dekadal, pentadal, and any fixed-length day period), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). This list is extensible: implementations MAY register additional well-known types through the OGC Naming Authority, and custom providers use a full URI as the type value."
     },
     "api": {
       "type": "string",
       "format": "uri",
-      "description": "OpenAPI definition URI. REQUIRED when type is a full URI (custom generator). For well-known types the API definition is implicit (resolvable from the registered OGC Definition URI). Machine clients fetch this to discover all available endpoints and parameters."
+      "description": "OpenAPI definition URI. REQUIRED when type is a full URI (custom provider). For well-known types the API definition is implicit (resolvable from the registered OGC Definition URI). Machine clients fetch this to discover all available endpoints and parameters."
     },
     "config": {
       "type": "object",
-      "description": "Author-set configuration values for this generator instance. These are static constants fixed at collection-authoring time and cannot be overridden by API clients per-request. They configure the generator algorithm itself — for example, the bin width of an integer-range generator or the base temperature of a growing-degree-day generator. For well-known generator types the set of recognised properties is defined by the OGC Definition URI for that type; for custom generators it is defined in the 'api' OpenAPI document. Well-known generators with no author-configurable constants (e.g. dekadal, pentadal) SHOULD omit this field or set it to {}. Clients that fetch the /dimensions list or /queryables endpoint will find these values in the response under 'config', enabling them to understand the exact parameterisation in use without reading server source code.",
+      "description": "Author-set configuration values for this provider instance. These are static constants fixed at collection-authoring time and cannot be overridden by API clients per-request. They configure the provider algorithm itself — for example, the bin width of an integer-range provider or the base temperature of a growing-degree-day provider. For well-known provider types the set of recognised properties is defined by the OGC Definition URI for that type; for custom providers it is defined in the 'api' OpenAPI document. Well-known providers with no author-configurable constants (e.g. dekadal, pentadal) SHOULD omit this field or set it to {}. Clients that fetch the /dimensions list or /queryables endpoint will find these values in the response under 'config', enabling them to understand the exact parameterisation in use without reading server source code.",
       "additionalProperties": true
     },
     "parameters": {
-      "description": "JSON Schema 2020-12 document describing the query-time parameters that clients may pass per request to /members, /children, and /search. These are NOT static configuration values — use the 'config' field for author-set constants. For hierarchical generators using a leveled strategy, individual hierarchy levels may supply their own parameters object containing the actual filter values (e.g. {\"level\": 0}) used to select members at that level — these are parameter instances, not schemas. Standard cross-generator parameters (SHOULD be declared here when the corresponding capability is present): 'language' (string, RFC 5646 Language-Tag — selects label language and sort collation; overrides Accept-Language header); 'sort_by' (string, output field name to sort members by, e.g. 'label', 'code', 'rank'; default is generator-defined); 'sort_dir' (string enum 'asc'|'desc', default 'asc'; used with sort_by).",
+      "description": "JSON Schema 2020-12 document describing the query-time parameters that clients may pass per request to /items, /children, and /search. These are NOT static configuration values — use the 'config' field for author-set constants. For hierarchical generators using a leveled strategy, individual hierarchy levels may supply their own parameters object containing the actual filter values (e.g. {\"level\": 0}) used to select members at that level — these are parameter instances, not schemas. Standard cross-generator parameters (SHOULD be declared here when the corresponding capability is present): 'language' (string, RFC 5646 Language-Tag — selects label language and sort collation; overrides Accept-Language header); 'sort_by' (string, output field name to sort members by, e.g. 'label', 'code', 'rank'; default is generator-defined); 'sort_dir' (string enum 'asc'|'desc', default 'asc'; used with sort_by).",
       "$ref": "https://json-schema.org/draft/2020-12/schema"
     },
     "output": {
@@ -51,7 +51,12 @@
     "hierarchical": {
       "type": "boolean",
       "default": false,
-      "description": "true if the generator supports Hierarchical conformance level: /children, /ancestors, and the optional ?parent= filter on /members. SHOULD be true when the dimension declares a hierarchy property. The generator's /children endpoint follows the same pagination contract as /members and mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members rather than collections."
+      "description": "true if the provider supports Hierarchical conformance level: /children, /ancestors, and the optional ?parent= filter on /items. SHOULD be true when the dimension declares a hierarchy property. The provider's /children endpoint follows the same pagination contract as /items and mirrors the STAC API Children Extension (https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members rather than collections."
+    },
+    "navigable": {
+      "type": "boolean",
+      "default": false,
+      "description": "true if the provider supports per-member navigation links (rel:children, rel:ancestors) when clients pass ?links=true. When navigable is true and ?links=true, each member in a /items or /children response MAY include navigation links. By default, member-level links are suppressed to minimize response size; response-level pagination links (self, next, prev) are always included. Requires hierarchical: true."
     },
     "language_support": {
       "type": "array",
