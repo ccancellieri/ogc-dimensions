@@ -15,7 +15,7 @@ Scalable dimension members: `size`, `href`, `generator`, `hierarchy`, and `nomin
 
 Current `cube:dimensions` embeds dimension members as inline `values` arrays. This works for small dimensions (spectral bands, ensemble members) but becomes impractical when dimensions scale to thousands or millions of values:
 
-- **Temporal:** Daily time series 2000-2025 = 9,131 values. Dekadal periods across 25 years = 900 values.
+- **Temporal:** Daily time series 2000-2025 = 9,131 values. Dekadal periods across 100 years = 3,636 values.
 - **Thematic:** FAO FAOSTAT indicators = 10,000+ codes. Administrative boundaries = 50,000+ members.
 - **Non-Gregorian calendars:** Dekadal (36/year), pentadal (72 or 73/year) -- cannot be expressed as ISO 8601 duration, `step: null` provides no mechanism to enumerate actual members.
 
@@ -25,7 +25,7 @@ The GeoDataCube SWG (charter [22-052](https://portal.ogc.org/files/?artifact_id=
 
 ### Proposal
 
-Three backwards-compatible additions to the dimension object:
+Five backwards-compatible additions to the dimension object, framed as a profile of **OGC API - Records**: dimension collections carry `itemType: "record"`, members are GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties, and paginated responses use the standard FeatureCollection envelope.
 
 #### 1. `size` (integer, RECOMMENDED)
 
@@ -84,19 +84,17 @@ Generators expose capabilities through standard OpenAPI interfaces:
 - `/extent` -- boundary computation
 - `/inverse` (optional) -- value-to-coordinate mapping for ingestion validation
 - `/search` (optional) -- query-based member discovery
+- `/children` (optional) -- direct children of a hierarchical member
+- `/ancestors` (optional) -- ancestor chain from root to member
 
 #### 4. `hierarchy` (object, OPTIONAL)
 
-Tree structure metadata for hierarchical dimensions. The `hierarchy` object is purely descriptive — the generator type determines how hierarchy operations are implemented. Two patterns are documented:
+Tree structure metadata for hierarchical dimensions. The `hierarchy` object is purely descriptive -- the generator type determines how hierarchy operations are implemented. Two patterns are documented:
 
 - **Recursive generators** (e.g., `static-tree`): Each member carries a `parent_code` field (analogous to `skos:broader`). Root members have `parent_code: null`. Clients navigate via `/children?parent=X` and `/ancestors?member=X`.
 - **Leveled generators** (e.g., `leveled-tree`): Hierarchy imposed by named level definitions, each with `member_id_property`, `parent_id_property`, `parent_level`, and `parameters` for level-scoped generator filtering. Adds `?level=N` to `/members`.
 
-Adding a new hierarchy strategy means adding a new generator type — no schema changes required.
-
-The generator exposes two new endpoints when `hierarchical: true`:
-- `GET /children?parent=X` — direct children of X (mirrors [STAC API Children Extension](https://api.stacspec.org/v1.0.0-rc.2/children) applied to dimension members)
-- `GET /ancestors?member=X` — ancestor chain from root to X inclusive
+Adding a new hierarchy strategy means adding a new generator type -- no schema changes required.
 
 ```json
 "admin": {
@@ -117,12 +115,71 @@ The generator exposes two new endpoints when `hierarchical: true`:
 
 #### 5. New dimension types: `nominal` and `ordinal` (proposed)
 
-The current `type` enum (`spatial`, `temporal`, `bands`, `other`) lacks precision for coded dimensions. Two additions:
+The current `type` enum (`spatial`, `temporal`, `bands`, `other`) lacks precision for coded dimensions:
 
-- **`nominal`**: Unordered coded dimension whose members are named categories (administrative units, indicator codes, land cover classes). Currently forced to use `other`.
-- **`ordinal`**: Ordered coded dimension whose members have inherent rank (quality flags, severity levels, priority classes). Currently forced to use `other`.
+- **`nominal`**: Unordered coded dimension whose members are named categories (administrative units, indicator codes, land cover classes).
+- **`ordinal`**: Ordered coded dimension whose members have inherent rank (quality flags, severity levels, priority classes).
 
-Both are standard statistical terms, already used in geoid's `DatacubeDimensionType`. Implementations that do not recognise these values treat them as unknown and continue processing -- backwards compatible.
+Both are standard statistical terms. Implementations that do not recognise these values treat them as unknown and continue processing -- backwards compatible.
+
+### OGC Records Profile
+
+Dimension endpoints produce standard **OGC API - Records** responses. Members are GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties:
+
+```json
+{
+  "type": "FeatureCollection",
+  "numberMatched": 3636,
+  "numberReturned": 3,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "2024-K01",
+      "geometry": null,
+      "properties": {
+        "type": "dimension-member",
+        "dimension:type": "temporal",
+        "dimension:code": "2024-K01",
+        "dimension:index": 0,
+        "dimension:start": "2024-01-01",
+        "dimension:end": "2024-01-10",
+        "time": {"interval": ["2024-01-01", "2024-01-10"]}
+      }
+    }
+  ],
+  "links": [
+    {"rel": "self", "href": ".../members?limit=3&offset=0", "type": "application/geo+json"},
+    {"rel": "next", "href": ".../members?limit=3&offset=3", "type": "application/geo+json"},
+    {"rel": "collection", "href": ".../dekadal", "type": "application/json"}
+  ]
+}
+```
+
+This alignment provides three practical benefits:
+1. Existing OGC API tooling (validators, client libraries, test suites) works unchanged
+2. Dimension collections coexist alongside STAC and other record types in the same catalog
+3. The OGC Building Blocks framework provides modular packaging for each conformance class
+
+### Conformance Levels
+
+Five additive conformance levels allow incremental adoption:
+
+| Level | Capabilities | Requirement |
+|---|---|---|
+| Basic | /members + /extent | MUST support |
+| Invertible | + /inverse | Invertible generators only |
+| Searchable | + /search (exact, range, like) | SHOULD support |
+| Hierarchical | + /children + /ancestors + ?parent= filter | Required when hierarchy is declared |
+| Similarity | + /search (vector) | MAY support; future work |
+
+### OGC Building Blocks
+
+Five building blocks are packaged for modular adoption:
+- `dimension-collection` -- collection-level metadata with `itemType: "record"` and `cube:dimensions`
+- `dimension-member` -- GeoJSON Feature schema with `dimension:*` properties
+- `dimension-pagination` -- FeatureCollection envelope with OGC API pagination
+- `dimension-inverse` -- value-to-member mapping
+- `dimension-hierarchical` -- `/children`, `/ancestors` endpoints with tree navigation links
 
 ### Backwards compatibility
 
@@ -137,9 +194,13 @@ Both are standard statistical terms, already used in geoid's `DatacubeDimensionT
 ### Resources
 
 - **Formal specification + JSON Schema:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec
+- **OGC Building Blocks:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/building-blocks
 - **Scientific paper:** https://github.com/ccancellieri/ogc-dimensions/tree/main/paper
 - **Reference implementation (Python/FastAPI):** https://github.com/ccancellieri/ogc-dimensions/tree/main/reference-implementation
 - **Live demo (FAO review environment):** https://data.review.fao.org/geospatial/v2/api/tools/docs
+- **Interactive Jupyter notebooks (GeoID platform):**
+  - [Creating Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/01_creating_dimensions.ipynb) -- dekadal/pentadal generators, hierarchy, inverse lookup
+  - [ASIS Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/02_asis_dimensions.ipynb) -- real-world ASIS datacube with paginated dimensions
 - **Worked examples:**
   - [dekadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/dekadal.json) -- temporal, 36/year
   - [pentadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/pentadal.json) -- two pentadal systems (72 + 73/year)
@@ -147,6 +208,7 @@ Both are standard statistical terms, already used in geoid's `DatacubeDimensionT
   - [legacy-bridge.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/legacy-bridge.json) -- backwards compatibility
   - [admin-hierarchy.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/admin-hierarchy.json) -- leveled hierarchy (GAUL 3-level)
   - [indicator-tree.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/indicator-tree.json) -- recursive hierarchy (FAOSTAT indicators)
+- **API response examples:** https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/RESPONSES.md
 
 ### OGC testbed evidence
 

@@ -80,10 +80,28 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 
 Well-known generator types (`dekadal`, `pentadal-monthly`, `pentadal-annual`, `integer-range`) resolve to registered OGC Definition URIs. Custom generators provide their own OpenAPI URI.
 
+## OGC Records Profile
+
+The entire specification is framed as a profile of **OGC API - Records**: dimension collections declare `itemType: "record"`, members are served as GeoJSON Features with `geometry: null` and `dimension:*` namespaced properties, and all paginated endpoints return standard FeatureCollection envelopes. This alignment provides immediate interoperability with OGC API tooling and validators.
+
+Worked response examples (conformance, list dimensions, paginated members, hierarchical navigation, search, inverse) are available at https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/RESPONSES.md
+
+## OGC Building Blocks
+
+Five building blocks are packaged for modular adoption:
+- `dimension-collection` -- collection-level metadata with `itemType: "record"` and `cube:dimensions`
+- `dimension-member` -- GeoJSON Feature schema with `dimension:*` properties
+- `dimension-pagination` -- FeatureCollection envelope with OGC API pagination
+- `dimension-inverse` -- value-to-member mapping
+- `dimension-hierarchical` -- `/children`, `/ancestors` endpoints with tree navigation links
+
+Source: https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/building-blocks
+
 ## Alignment with SWG approach
 
 The TB-20 pivot from standalone GDC standard to profile/integration approach directly supports this proposal:
 - The generator properties are **additive extensions** to the existing STAC `cube:dimensions` model
+- The OGC Records profile ensures structural compatibility with the broader OGC API ecosystem
 - No existing properties are modified or removed
 - Servers can adopt incrementally (size-only, then href, then generators)
 - Legacy clients are unaffected (unknown properties are ignored per JSON processing rules)
@@ -95,6 +113,11 @@ The TB-20 pivot from standalone GDC standard to profile/integration approach dir
 - **Worked examples:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/examples
 - **Reference implementation:** https://github.com/ccancellieri/ogc-dimensions/tree/main/reference-implementation
 - **Live demo (FAO):** https://data.review.fao.org/geospatial/v2/api/tools/docs
+- **OGC Building Blocks:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/building-blocks
+- **API response examples:** https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/RESPONSES.md
+- **Interactive Jupyter notebooks (GeoID platform):**
+  - [Creating Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/01_creating_dimensions.ipynb)
+  - [ASIS Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/02_asis_dimensions.ipynb)
 
 ## Hierarchical Dimensions and Controlled Vocabulary Gap
 
