@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/dimension.json",
   "title": "Extended Datacube Dimension",
-  "description": "Extends the STAC Datacube Extension dimension object with size, href, and provider properties for scalable dimension member dissemination. Full provider details (config, parameters, hierarchy, language support, capabilities) are exposed at the OGC API - Dimensions collection endpoint referenced by provider.href.",
+  "description": "Extends the STAC Datacube Extension dimension object with size and provider properties for scalable dimension member dissemination. Full provider details (config, parameters, hierarchy, language support, capabilities) are exposed at the OGC API - Dimensions collection endpoint referenced by provider.href; the paginated items endpoint is discovered via the OGC API - Records rel=\"items\" link on that collection response.",
   "type": "object",
   "required": ["type"],
   "properties": {
@@ -37,7 +37,7 @@
     },
     "values": {
       "type": "array",
-      "description": "Explicit enumeration of dimension members. OPTIONAL when href is provided."
+      "description": "Explicit enumeration of dimension members. OPTIONAL when provider is present."
     },
     "step": {
       "description": "The space between dimension values. Use null for irregular spacing. Supports ISO 8601 durations for standard intervals. For non-Gregorian intervals (dekadal, pentadal), set step to null and rely on the provider to define member boundaries.",
@@ -64,12 +64,6 @@
       "minimum": 0,
       "description": "Total number of discrete members in this dimension. For flat dimensions, this is the total member count. For hierarchical dimensions with leveled strategy, omit this field and use size on individual levels instead; for recursive strategy, retrieve total count from the provider. RECOMMENDED for flat and recursive dimensions."
     },
-    "href": {
-      "type": "string",
-      "format": "uri-reference",
-      "deprecated": true,
-      "description": "DEPRECATED transitional alias for the paginated items endpoint. New implementations SHOULD omit this property and instead expose `provider.href` (pointing to the dimension collection); clients discover the paginated items endpoint by following the OGC API - Records `rel=\"items\"` link returned on that collection response. Servers MAY continue to emit this field as a convenience alias for legacy STAC clients that cannot follow `links[]`; when emitted, it MUST resolve to the same items endpoint as `provider.href` + `rel=\"items\"`. Retained for backwards compatibility; may be removed in a future major version."
-    },
     "provider": {
       "type": "object",
       "description": "Lightweight reference to the dimension's provider — the system that serves or generates the members. Contains just enough to categorize the dimension and link to the full definition at the OGC API - Dimensions endpoint. Full details (config, parameters, output schema, invertible flag, hierarchy, language support, conformance) are available by following provider.href.",
@@ -88,9 +82,6 @@
     }
   },
   "dependentSchemas": {
-    "href": {
-      "description": "When href is provided, values becomes optional."
-    },
     "provider": {
       "description": "When provider is present, the dimension has a backing service. Follow provider.href to discover capabilities (invertible, hierarchical, language support). When the provider type is 'static-tree' or 'leveled-tree', size SHOULD be specified per hierarchy level rather than at the dimension root."
     }

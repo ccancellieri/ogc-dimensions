@@ -42,7 +42,6 @@ ogc-dimensions/
 │       ├── integer-range.json    # Elevation bands
 │       ├── admin-hierarchy.json  # Administrative boundary hierarchy
 │       ├── indicator-tree.json   # FAO indicator catalog (tree generator)
-│       ├── legacy-bridge.json    # Legacy client compatibility
 │       └── RESPONSES.md          # Annotated API response examples
 ├── paper/                        # Scientific publication
 │   ├── manuscript.md             # Paper (Markdown source, IMRAD structure)
@@ -212,8 +211,6 @@ A dimension in `cube:dimensions` carries `size` (cardinality) and a slim `provid
 ```
 
 Client flow: `GET provider.href` → read `links[rel="items"]` → `GET` that URL for paginated `FeatureCollection`. Additional capabilities (`/inverse`, `/search`, `/children`, `/ancestors`) are advertised as Records `links[]` on the same collection response with their own `rel` values.
-
-**Backwards compatibility.** A dimension-level `href` property remains defined as a DEPRECATED transitional alias: servers MAY emit it so that legacy STAC clients unable to follow `links[]` can still page through members. When emitted, it MUST resolve to the same items endpoint as `provider.href` + `rel="items"`. See [`spec/examples/legacy-bridge.json`](spec/examples/legacy-bridge.json). New implementations SHOULD omit it.
 
 The reference implementation is deployed on the FAO Agro-Informatics Platform (Google Cloud Run) as a pip-installable FastAPI extension. The `ogc-dimensions` package is mounted alongside the production STAC catalog services with no code duplication.
 

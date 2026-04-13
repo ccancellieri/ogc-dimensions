@@ -65,7 +65,6 @@ details (type, config, capabilities) live at the dimension collection endpoint.
         "dekadal": {
           "type": "temporal",
           "size": 36,
-          "href": ".../dimensions/dekadal/items",
           "provider": {
             "type": "daily-period",
             "href": ".../dimensions/dekadal"

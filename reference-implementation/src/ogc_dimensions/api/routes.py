@@ -368,7 +368,6 @@ def _dimension_to_collection(
                     "type": gen.provider_type,
                     "href": dim_url,
                 },
-                "href": f"{dim_url}/items",
             }
         },
         "links": links,

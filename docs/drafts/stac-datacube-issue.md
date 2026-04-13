@@ -115,13 +115,9 @@ Total member count. Resolves [#31](https://github.com/stac-extensions/datacube/i
 }
 ```
 
-### 2. `href` (URI, OPTIONAL)
+### 2. `provider` (object, OPTIONAL)
 
-Link to the paginated `/items` endpoint returning dimension members in OGC Records format. When present, `values` MAY be omitted. Pagination follows OGC API – Common Part 2 (`limit`/`offset`, `numberMatched`/`numberReturned`, `rel:next`/`rel:prev`).
-
-### 3. `provider` (object, OPTIONAL)
-
-A slim reference identifying the dimension's backing provider and linking to its full definition at the OGC API – Dimensions collection endpoint. This keeps the STAC `cube:dimensions` compact while allowing provider-aware clients to discover all capabilities by following `provider.href`.
+A slim reference identifying the dimension's backing provider and linking to its full definition at the OGC API – Dimensions collection endpoint. This keeps the STAC `cube:dimensions` compact while allowing provider-aware clients to discover all capabilities by following `provider.href`; from there, the paginated `/items` endpoint is discovered via the OGC API – Records `rel="items"` link on the collection response.
 
 ```json
 {
@@ -130,7 +126,6 @@ A slim reference identifying the dimension's backing provider and linking to its
     "step": null,
     "unit": "dekad",
     "size": 900,
-    "href": "https://example.org/dimensions/temporal-dekadal/items",
     "provider": {
       "type": "daily-period",
       "href": "https://example.org/dimensions/temporal-dekadal"
@@ -182,7 +177,7 @@ The full provider definition — config, parameters, output schema, invertibilit
 
 Custom providers use a full URI as the `type` value and MUST provide an `api` field pointing to their OpenAPI definition.
 
-### 4. `hierarchy` (object, OPTIONAL)
+### 3. `hierarchy` (object, OPTIONAL)
 
 Tree structure metadata for hierarchical coded dimensions. The `provider.type` determines navigation behaviour; `hierarchy` is descriptive metadata for clients (and thus stable across provider changes).
 
@@ -232,7 +227,7 @@ Each hierarchy level MAY declare a `labels` map for multilingual level names alo
 }
 ```
 
-### 5. `nominal` and `ordinal` dimension types
+### 4. `nominal` and `ordinal` dimension types
 
 The current type enum (`spatial`, `temporal`, `bands`, `other`) lacks precision for coded dimensions:
 
@@ -323,10 +318,9 @@ Standard cross-level query parameters (SHOULD be supported when the relevant cap
 
 ## Backwards Compatibility
 
-All additions are optional. Existing collections remain valid. The only change to existing behaviour is that `values` becomes OPTIONAL when `href` is present — collections that already omit `values` (or set it to `[]`) are unaffected.
+All additions are optional. Existing collections remain valid. `values` becomes OPTIONAL when `provider` is present; collections that already omit `values` (or set it to `[]`) are unaffected.
 
-- Legacy clients following `href` receive standard paginated JSON — indistinguishable from a traditional `values` array.
-- Clients that recognise `provider.href` can navigate to the OGC API – Dimensions collection to discover capabilities.
+- Clients that recognise `provider.href` can navigate to the OGC API – Dimensions collection to discover capabilities, and from there follow `links[rel="items"]` to the paginated members endpoint.
 - Clients that recognise `labels` gain multilingual display; those that don't fall back to the `label` string.
 
 ---
@@ -337,10 +331,9 @@ All examples validate against the extended schema and are backed by a live refer
 
 | Example | Type | Demonstrates |
 |---|---|---|
-| [dekadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/dekadal.json) | `temporal` | `size`, `href`, slim `provider`, dekadal calendar (36/year), invertible |
+| [dekadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/dekadal.json) | `temporal` | `size`, slim `provider`, dekadal calendar (36/year), invertible |
 | [pentadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/pentadal.json) | `temporal` | Two competing pentadal systems (72/yr monthly vs 73/yr annual) |
 | [integer-range.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/integer-range.json) | `other` | Non-temporal integer-range dimension (100 m elevation bands, 0–5000 m) |
-| [legacy-bridge.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/legacy-bridge.json) | `temporal` | ISO date output for legacy client compatibility |
 | [admin-hierarchy.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/admin-hierarchy.json) | **`nominal`** | Leveled hierarchy (Country → ADM1 → ADM2), multilingual `labels`, `language_support`, sort |
 | [indicator-tree.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/indicator-tree.json) | **`nominal`** | Recursive hierarchy (FAOSTAT indicator tree, depth 4) |
 
