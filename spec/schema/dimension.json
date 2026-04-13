@@ -67,7 +67,8 @@
     "href": {
       "type": "string",
       "format": "uri-reference",
-      "description": "Link to a paginated endpoint returning dimension values. When present, values MAY be omitted. For hierarchical dimensions, this SHOULD point to the root level (coarsest granularity). Relative or absolute URI."
+      "deprecated": true,
+      "description": "DEPRECATED transitional alias for the paginated items endpoint. New implementations SHOULD omit this property and instead expose `provider.href` (pointing to the dimension collection); clients discover the paginated items endpoint by following the OGC API - Records `rel=\"items\"` link returned on that collection response. Servers MAY continue to emit this field as a convenience alias for legacy STAC clients that cannot follow `links[]`; when emitted, it MUST resolve to the same items endpoint as `provider.href` + `rel=\"items\"`. Retained for backwards compatibility; may be removed in a future major version."
     },
     "provider": {
       "type": "object",

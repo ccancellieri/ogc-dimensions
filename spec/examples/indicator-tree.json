@@ -77,8 +77,7 @@
       "provider": {
         "type": "https://www.fao.org/faostat/generators/indicator/openapi.json",
         "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators"
-      },
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators/items?limit=5"
+      }
     }
   }
 }

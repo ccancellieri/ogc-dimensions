@@ -5,7 +5,7 @@
 This repository contains the specification, scientific publication, and reference implementation for extending geospatial datacube standards (STAC Datacube Extension, OGC GeoDataCube API) with:
 
 1. **Paginated dimension members** -- `size` + `href` for dimensions with thousands to millions of members
-2. **Dimension generators** -- algorithmic member generation with machine-discoverable OpenAPI definitions
+2. **Dimension providers** -- algorithmic member generation with machine-discoverable OpenAPI definitions
 3. **Bijective inversion** -- value-to-coordinate mapping enabling dimension integrity enforcement at data ingestion
 4. **Similarity-driven navigation** -- searching dimension spaces by concept proximity, bridging OGC metadata with AI/ML
 
@@ -151,7 +151,7 @@ curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/ite
 # → numberReturned: 1, links: [self, prev → offset=30]
 ```
 
-### Generator capabilities
+### Provider capabilities
 
 ```bash
 # List all registered dimensions and their capabilities
@@ -194,22 +194,26 @@ curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/sea
 
 ### STAC Collection integration
 
-The `href` property in a STAC collection points directly to the generator's paginated `/items` endpoint. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete collection example where:
+A dimension in `cube:dimensions` carries `size` (cardinality) and a slim `provider` object pointing at the dimension collection. Clients discover the paginated members endpoint by following the OGC API - Records `rel="items"` link on that collection response — no separate dimension-level items URL is required. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete example:
 
 ```json
 {
   "cube:dimensions": {
     "time": {
       "type": "temporal",
-      "generator": { "type": "dekadal", "invertible": true },
       "size": 900,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5"
+      "provider": {
+        "type": "daily-period",
+        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal"
+      }
     }
   }
 }
 ```
 
-Legacy clients follow `href` and see standard paginated JSON. Generator-aware clients read the `generator` object and use `/inverse`, `/search`, and format negotiation (`?format=datetime` vs `?format=native`).
+Client flow: `GET provider.href` → read `links[rel="items"]` → `GET` that URL for paginated `FeatureCollection`. Additional capabilities (`/inverse`, `/search`, `/children`, `/ancestors`) are advertised as Records `links[]` on the same collection response with their own `rel` values.
+
+**Backwards compatibility.** A dimension-level `href` property remains defined as a DEPRECATED transitional alias: servers MAY emit it so that legacy STAC clients unable to follow `links[]` can still page through members. When emitted, it MUST resolve to the same items endpoint as `provider.href` + `rel="items"`. See [`spec/examples/legacy-bridge.json`](spec/examples/legacy-bridge.json). New implementations SHOULD omit it.
 
 The reference implementation is deployed on the FAO Agro-Informatics Platform (Google Cloud Run) as a pip-installable FastAPI extension. The `ogc-dimensions` package is mounted alongside the production STAC catalog services with no code duplication.
 
@@ -219,7 +223,7 @@ All endpoints are mounted under a configurable prefix (default `/dimensions`).
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | List all registered dimensions with generator metadata |
+| `/` | GET | List all registered dimensions with provider metadata |
 | `/conformance` | GET | OGC API conformance classes |
 | `/{id}/queryables` | GET | JSON Schema of queryable member properties |
 | `/{id}/items` | GET | Paginated dimension members (OGC Records FeatureCollection) |
@@ -232,13 +236,19 @@ All endpoints are mounted under a configurable prefix (default `/dimensions`).
 
 ## Conformance Levels
 
-| Level | Capabilities | Requirement |
-|---|---|---|
-| **Basic** | `/items` + `/extent` + `/conformance` + `/queryables` | All generators MUST support |
-| **Invertible** | + `/inverse` (GET + POST batch) | Enables ingestion validation |
-| **Searchable** | + `/search` (exact, range, like) | SHOULD support |
-| **Hierarchical** | + `/children` + `/ancestors` + `?parent=` filter | For tree-structured dimensions |
-| **Similarity** | + `/search` (vector embedding) | MAY support (AI/ML) |
+The specification groups capabilities into five **adoption levels** for narrative clarity. Each level is realised by one or more of the five **Building Blocks** listed in [spec/building-blocks/bblocks.json](spec/building-blocks/bblocks.json); adopters consume BBs, while readers discuss levels.
+
+| Level | Capabilities | Realised by Building Block(s) | Requirement |
+|---|---|---|---|
+| **Basic** | `/items` + `/extent` + `/conformance` + `/queryables` | `dimension-collection`, `dimension-member`, `dimension-pagination` | All providers MUST support |
+| **Invertible** | + `/inverse` (GET + POST batch) | `dimension-inverse` | Invertible providers only |
+| **Searchable** | + `/search` (exact, range, like) | `dimension-collection` (query capability) | SHOULD support |
+| **Hierarchical** | + `/children` + `/ancestors` + `?parent=` filter | `dimension-hierarchical` | Required when the dimension declares a `hierarchy` property |
+| *Similarity (informative)* | + `/search` (vector embedding, k-NN) | *— no Building Block ships in 1.0; future work* | MAY support |
+
+The *Similarity* row is retained as an informative architectural hook for embedding-based dimension navigation; it has no normative schema, no conformance class URI, and no reference implementation in this release. Implementations that claim "Similarity" conformance are advertising an extension, not a standard capability.
+
+Conformance class URIs follow the pattern `http://www.opengis.net/spec/ogc-dimensions/1.0/conf/{building-block-id}` and are declared in each Building Block's `description.md`.
 
 ## Standardization Pathway
 

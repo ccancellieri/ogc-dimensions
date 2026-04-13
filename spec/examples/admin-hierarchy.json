@@ -107,8 +107,7 @@
       "provider": {
         "type": "leveled-tree",
         "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin"
-      },
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin/items?level=0&limit=5"
+      }
     }
   }
 }

@@ -2,6 +2,7 @@
   "type": "Collection",
   "id": "chirps-dekadal-legacy",
   "title": "CHIRPS Dekadal (legacy-compatible view)",
+  "description": "Illustrative ONLY. Shows the DEPRECATED transitional form in which a dimension-level `href` is emitted alongside `provider.href` so that legacy STAC clients that cannot follow OGC Records `links[]` can still page through members. New implementations SHOULD omit the outer `href` and expose only `provider.href`; clients then follow `rel=\"items\"` on the provider collection response. See dekadal.json for the recommended form.",
   "cube:dimensions": {
     "time": {
       "type": "temporal",

@@ -163,3 +163,95 @@ class TestLeveledGenerate:
         for m in r.members:
             assert m.extra["parent_code"] == "EUR"
             assert m.extra["level"] == 1
+
+    def test_level_filter_excludes_other_levels(self, leveled):
+        """?level=0 MUST NOT leak level-1 members into the response."""
+        r = leveled.generate("", "", level=0, limit=1000)
+        levels = {m.extra["level"] for m in r.members}
+        assert levels == {0}, f"level=0 query returned mixed levels: {levels}"
+
+
+# ---------------------------------------------------------------------------
+# SKOS-like fixture: concept-hierarchy scheme with 3 levels, multilingual labels,
+# and cross-level integrity — approximates how AGROVOC / GEMET concept schemes
+# look when they are surfaced through ogc-dimensions.
+# ---------------------------------------------------------------------------
+
+SKOS_CONCEPTS = [
+    {"code": "c_crops", "label": "Crops", "labels": {"en": "Crops", "fr": "Cultures"}, "parent_code": None, "level": 0},
+    {"code": "c_livestock", "label": "Livestock", "labels": {"en": "Livestock", "fr": "Bétail"}, "parent_code": None, "level": 0},
+
+    {"code": "c_cereals", "label": "Cereals", "labels": {"en": "Cereals", "fr": "Céréales"}, "parent_code": "c_crops", "level": 1},
+    {"code": "c_legumes", "label": "Legumes", "labels": {"en": "Legumes", "fr": "Légumineuses"}, "parent_code": "c_crops", "level": 1},
+    {"code": "c_ruminants", "label": "Ruminants", "labels": {"en": "Ruminants", "fr": "Ruminants"}, "parent_code": "c_livestock", "level": 1},
+
+    {"code": "c_wheat", "label": "Wheat", "labels": {"en": "Wheat", "fr": "Blé"}, "parent_code": "c_cereals", "level": 2},
+    {"code": "c_maize", "label": "Maize", "labels": {"en": "Maize", "fr": "Maïs"}, "parent_code": "c_cereals", "level": 2},
+    {"code": "c_soybean", "label": "Soybean", "labels": {"en": "Soybean", "fr": "Soja"}, "parent_code": "c_legumes", "level": 2},
+    {"code": "c_cattle", "label": "Cattle", "labels": {"en": "Cattle", "fr": "Bovins"}, "parent_code": "c_ruminants", "level": 2},
+]
+
+
+@pytest.fixture
+def skos_tree():
+    return StaticTreeProvider(nodes=SKOS_CONCEPTS)
+
+
+class TestSKOSLikeHierarchy:
+    def test_roots_only_contain_top_concepts(self, skos_tree):
+        roots = skos_tree.generate("", "", limit=100)
+        codes = {m.code for m in roots.members}
+        assert codes == {"c_crops", "c_livestock"}
+
+    def test_cross_level_integrity_every_parent_exists(self, skos_tree):
+        """Every non-root parent_code MUST resolve to a node in the scheme."""
+        codes = {n["code"] for n in SKOS_CONCEPTS}
+        for n in SKOS_CONCEPTS:
+            if n["parent_code"] is not None:
+                assert n["parent_code"] in codes, (
+                    f"{n['code']}: dangling parent_code={n['parent_code']!r}"
+                )
+
+    def test_ancestors_depth_matches_level(self, skos_tree):
+        """ancestors(leaf) length MUST equal leaf.level + 1 for a well-formed tree."""
+        for n in SKOS_CONCEPTS:
+            chain = skos_tree.ancestors(n["code"])
+            assert len(chain) == n["level"] + 1, (
+                f"{n['code']} at level {n['level']} has {len(chain)} ancestors"
+            )
+
+    def test_ancestors_path_is_monotonic(self, skos_tree):
+        """Ancestor chain for a leaf MUST link root→…→leaf via parent_code."""
+        chain = skos_tree.ancestors("c_wheat")
+        assert [n["code"] for n in chain] == ["c_crops", "c_cereals", "c_wheat"]
+
+    def test_multilingual_labels_cover_all_nodes(self, skos_tree):
+        for n in SKOS_CONCEPTS:
+            assert "en" in n["labels"] and "fr" in n["labels"], (
+                f"{n['code']}: missing EN/FR label"
+            )
+
+
+class TestCycleRejection:
+    def test_self_parent_does_not_loop_forever(self):
+        """A node pointing to itself MUST NOT cause ancestors() to hang."""
+        cyclic = [
+            {"code": "X", "label": "X", "labels": {"en": "X"}, "parent_code": "X", "level": 0},
+        ]
+        tree = StaticTreeProvider(nodes=cyclic)
+        chain = tree.ancestors("X")
+        assert len(chain) == 1
+        assert chain[0]["code"] == "X"
+
+    def test_two_node_cycle_terminates(self):
+        """A → B → A MUST terminate via seen-set guard."""
+        cyclic = [
+            {"code": "A", "label": "A", "labels": {"en": "A"}, "parent_code": "B", "level": 0},
+            {"code": "B", "label": "B", "labels": {"en": "B"}, "parent_code": "A", "level": 0},
+        ]
+        tree = StaticTreeProvider(nodes=cyclic)
+        chain = tree.ancestors("A")
+        codes = {n["code"] for n in chain}
+        assert codes == {"A", "B"}, (
+            f"expected cycle to break with both nodes visited once, got {codes}"
+        )

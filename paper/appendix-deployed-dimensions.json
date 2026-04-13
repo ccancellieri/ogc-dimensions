@@ -1,0 +1,355 @@
+{
+  "_snapshot": {
+    "captured_at": "2026-04-13T20:14:23.038358+00:00",
+    "source": "reference-implementation TestClient GET /dimensions/",
+    "note": "Dimension catalog exposed by the OGC Dimensions reference implementation (five canonical example collections covering the six provider types: dekadal, pentadal-monthly, pentadal-annual, daily-period, integer-range, tree). The FAO Agro-Informatics Platform deployment at https://data.review.fao.org/geospatial/v2/api/tools/dimensions/ extends this catalog to twelve production dimensions (FAOSTAT indicators, AGROVOC concepts, GAUL administrative units, etc.) using the same provider types."
+  },
+  "response": {
+    "collections": [
+      {
+        "id": "dekadal",
+        "title": "Dekadal",
+        "description": "10-day periods (36/year). Used by FAO ASIS, FEWS NET, TUW-GEO.",
+        "itemType": "record",
+        "provider": {
+          "type": "daily-period",
+          "config": {
+            "period_days": 10,
+            "scheme": "monthly"
+          },
+          "invertible": true,
+          "hierarchical": false,
+          "search": [
+            "exact",
+            "range"
+          ]
+        },
+        "conformsTo": [
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse"
+        ],
+        "cube:dimensions": {
+          "dekadal": {
+            "type": "temporal",
+            "provider": {
+              "type": "daily-period",
+              "href": "http://testserver/dimensions/dekadal"
+            },
+            "href": "http://testserver/dimensions/dekadal/items"
+          }
+        },
+        "links": [
+          {
+            "rel": "self",
+            "href": "http://testserver/dimensions/dekadal",
+            "type": "application/json"
+          },
+          {
+            "rel": "items",
+            "href": "http://testserver/dimensions/dekadal/items",
+            "type": "application/geo+json",
+            "title": "Paginated members"
+          },
+          {
+            "rel": "queryables",
+            "href": "http://testserver/dimensions/dekadal/queryables",
+            "type": "application/schema+json",
+            "title": "Queryable and sortable member properties"
+          },
+          {
+            "rel": "inverse",
+            "href": "http://testserver/dimensions/dekadal/inverse",
+            "type": "application/json",
+            "title": "Value-to-member inverse mapping"
+          }
+        ],
+        "extent": {
+          "temporal": {
+            "interval": [
+              [
+                "2024-01-01T00:00:00Z",
+                "2024-12-31T00:00:00Z"
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "id": "pentadal-monthly",
+        "title": "Pentadal Monthly",
+        "description": "5-day periods aligned to months (72/year). Used by CHIRPS, CDT, FAO.",
+        "itemType": "record",
+        "provider": {
+          "type": "daily-period",
+          "config": {
+            "period_days": 5,
+            "scheme": "monthly"
+          },
+          "invertible": true,
+          "hierarchical": false,
+          "search": [
+            "exact",
+            "range"
+          ]
+        },
+        "conformsTo": [
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse"
+        ],
+        "cube:dimensions": {
+          "pentadal-monthly": {
+            "type": "temporal",
+            "provider": {
+              "type": "daily-period",
+              "href": "http://testserver/dimensions/pentadal-monthly"
+            },
+            "href": "http://testserver/dimensions/pentadal-monthly/items"
+          }
+        },
+        "links": [
+          {
+            "rel": "self",
+            "href": "http://testserver/dimensions/pentadal-monthly",
+            "type": "application/json"
+          },
+          {
+            "rel": "items",
+            "href": "http://testserver/dimensions/pentadal-monthly/items",
+            "type": "application/geo+json",
+            "title": "Paginated members"
+          },
+          {
+            "rel": "queryables",
+            "href": "http://testserver/dimensions/pentadal-monthly/queryables",
+            "type": "application/schema+json",
+            "title": "Queryable and sortable member properties"
+          },
+          {
+            "rel": "inverse",
+            "href": "http://testserver/dimensions/pentadal-monthly/inverse",
+            "type": "application/json",
+            "title": "Value-to-member inverse mapping"
+          }
+        ],
+        "extent": {
+          "temporal": {
+            "interval": [
+              [
+                "2024-01-01T00:00:00Z",
+                "2024-12-31T00:00:00Z"
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "id": "pentadal-annual",
+        "title": "Pentadal Annual",
+        "description": "5-day periods aligned to year start (73/year). Used by GPCP, CPC/NOAA.",
+        "itemType": "record",
+        "provider": {
+          "type": "daily-period",
+          "config": {
+            "period_days": 5,
+            "scheme": "annual"
+          },
+          "invertible": true,
+          "hierarchical": false,
+          "search": [
+            "exact",
+            "range"
+          ]
+        },
+        "conformsTo": [
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse"
+        ],
+        "cube:dimensions": {
+          "pentadal-annual": {
+            "type": "temporal",
+            "provider": {
+              "type": "daily-period",
+              "href": "http://testserver/dimensions/pentadal-annual"
+            },
+            "href": "http://testserver/dimensions/pentadal-annual/items"
+          }
+        },
+        "links": [
+          {
+            "rel": "self",
+            "href": "http://testserver/dimensions/pentadal-annual",
+            "type": "application/json"
+          },
+          {
+            "rel": "items",
+            "href": "http://testserver/dimensions/pentadal-annual/items",
+            "type": "application/geo+json",
+            "title": "Paginated members"
+          },
+          {
+            "rel": "queryables",
+            "href": "http://testserver/dimensions/pentadal-annual/queryables",
+            "type": "application/schema+json",
+            "title": "Queryable and sortable member properties"
+          },
+          {
+            "rel": "inverse",
+            "href": "http://testserver/dimensions/pentadal-annual/inverse",
+            "type": "application/json",
+            "title": "Value-to-member inverse mapping"
+          }
+        ],
+        "extent": {
+          "temporal": {
+            "interval": [
+              [
+                "2024-01-01T00:00:00Z",
+                "2024-12-31T00:00:00Z"
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "id": "integer-range",
+        "title": "Integer Range",
+        "description": "Evenly-spaced integer bins (step=100). Elevation bands, percentiles.",
+        "itemType": "record",
+        "provider": {
+          "type": "integer-range",
+          "config": {
+            "step": 100
+          },
+          "invertible": true,
+          "hierarchical": false,
+          "search": [
+            "exact",
+            "range"
+          ]
+        },
+        "conformsTo": [
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse"
+        ],
+        "cube:dimensions": {
+          "integer-range": {
+            "type": "other",
+            "provider": {
+              "type": "integer-range",
+              "href": "http://testserver/dimensions/integer-range"
+            },
+            "href": "http://testserver/dimensions/integer-range/items"
+          }
+        },
+        "links": [
+          {
+            "rel": "self",
+            "href": "http://testserver/dimensions/integer-range",
+            "type": "application/json"
+          },
+          {
+            "rel": "items",
+            "href": "http://testserver/dimensions/integer-range/items",
+            "type": "application/geo+json",
+            "title": "Paginated members"
+          },
+          {
+            "rel": "queryables",
+            "href": "http://testserver/dimensions/integer-range/queryables",
+            "type": "application/schema+json",
+            "title": "Queryable and sortable member properties"
+          },
+          {
+            "rel": "inverse",
+            "href": "http://testserver/dimensions/integer-range/inverse",
+            "type": "application/json",
+            "title": "Value-to-member inverse mapping"
+          }
+        ]
+      },
+      {
+        "id": "world-admin",
+        "title": "World Admin",
+        "description": "Hierarchical administrative boundaries: 5 continents -> 49 countries. Demonstrates the Hierarchical conformance level (/children, /ancestors).",
+        "itemType": "record",
+        "provider": {
+          "type": "leveled-tree",
+          "config": {},
+          "invertible": false,
+          "hierarchical": true,
+          "search": [
+            "exact",
+            "like"
+          ]
+        },
+        "conformsTo": [
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/core",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-collection",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-member",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
+          "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-hierarchical"
+        ],
+        "cube:dimensions": {
+          "world-admin": {
+            "type": "nominal",
+            "provider": {
+              "type": "leveled-tree",
+              "href": "http://testserver/dimensions/world-admin"
+            },
+            "href": "http://testserver/dimensions/world-admin/items"
+          }
+        },
+        "links": [
+          {
+            "rel": "self",
+            "href": "http://testserver/dimensions/world-admin",
+            "type": "application/json"
+          },
+          {
+            "rel": "items",
+            "href": "http://testserver/dimensions/world-admin/items",
+            "type": "application/geo+json",
+            "title": "Paginated members"
+          },
+          {
+            "rel": "queryables",
+            "href": "http://testserver/dimensions/world-admin/queryables",
+            "type": "application/schema+json",
+            "title": "Queryable and sortable member properties"
+          },
+          {
+            "rel": "children",
+            "href": "http://testserver/dimensions/world-admin/children",
+            "type": "application/geo+json",
+            "title": "Direct children of a hierarchy node"
+          },
+          {
+            "rel": "ancestors",
+            "href": "http://testserver/dimensions/world-admin/ancestors",
+            "type": "application/json",
+            "title": "Ancestor chain from root to member"
+          }
+        ]
+      }
+    ],
+    "links": [
+      {
+        "rel": "self",
+        "href": "http://testserver/dimensions",
+        "type": "application/json"
+      }
+    ]
+  }
+}

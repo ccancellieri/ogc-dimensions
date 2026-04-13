@@ -60,11 +60,11 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 
 | Level | Capabilities | Requirement |
 |---|---|---|
-| Basic | /members + /extent | All dimensions with `generator` |
+| Basic | /items + /extent | All dimensions with `provider` |
 | Invertible | + /inverse | When `invertible: true` |
 | Searchable | + /search (exact, range, like); `?language=` on search | SHOULD for non-trivial dims |
 | Hierarchical | + /children + /ancestors; `has_children` on members | When `hierarchy` is declared |
-| Similarity | + /search (vector) | MAY (future) |
+| *Similarity (informative)* | + /search (vector) | No BB in 1.0; future work |
 
 Standard cross-level query parameters: `language` (RFC 5646), `sort_by`, `sort_dir`.
 

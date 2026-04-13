@@ -31,7 +31,6 @@
       "extent": [0, 5000],
       "unit": "m",
       "size": 51,
-      "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands/items?limit=5",
       "provider": {
         "type": "integer-range",
         "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands"

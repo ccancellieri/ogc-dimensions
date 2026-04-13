@@ -1,8 +1,37 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-pagination/schema.json",
-  "title": "Dimension Pagination Response",
-  "description": "OGC Common Part 2 paginated response for dimension members served as Records.",
+  "title": "Dimension Pagination (response + request parameters)",
+  "description": "Profile of OGC API - Common Part 2 pagination (OGC 19-072) for dimension members served as Records. Request parameters `limit` and `offset` are constrained below; responses wrap dimension-member records in a FeatureCollection with numberMatched/numberReturned and paging links.",
+  "$comment": "Normative reference: OGC API - Common - Part 2: Geospatial Data (OGC 19-072), https://docs.ogc.org/is/19-072/19-072.html. Official parameter definitions: https://schemas.opengis.net/ogcapi/common/part2/1.0/openapi/parameters/ (limit.yaml, bbox.yaml). This schema restates the `limit` and `offset` semantics in JSON Schema for validation convenience; in case of divergence, the OGC Common Part 2 definitions are authoritative.",
+  "$defs": {
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000,
+      "default": 10,
+      "description": "Maximum number of dimension members per page. Aligns with OGC API - Common Part 2 `limit` parameter (integer, minimum 1). Servers MAY enforce a smaller maximum via the `default` / `maximum` values advertised in the OpenAPI document; this schema caps at 10000 as a sanity bound."
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Zero-based starting position in the generated member sequence. Aligns with the `offset` parameter used by OGC API - Common Part 2 implementations for cursorless pagination over ordered sequences."
+    },
+    "link": {
+      "type": "object",
+      "required": ["href", "rel"],
+      "properties": {
+        "href": {"type": "string", "format": "uri-reference"},
+        "rel": {
+          "type": "string",
+          "enum": ["self", "next", "prev", "collection", "items"]
+        },
+        "type": {"type": "string"},
+        "title": {"type": "string"}
+      }
+    }
+  },
   "type": "object",
   "required": ["type", "features"],
   "properties": {
@@ -19,7 +48,7 @@
     "numberMatched": {
       "type": "integer",
       "minimum": 0,
-      "description": "Total number of dimension members matching the query within the dimension's extent."
+      "description": "Total number of dimension members matching the query within the dimension's extent. Semantics per OGC API - Features Part 1 §7.15.3 (carried forward by OGC Common Part 2)."
     },
     "numberReturned": {
       "type": "integer",
@@ -28,19 +57,7 @@
     },
     "links": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["href", "rel"],
-        "properties": {
-          "href": {"type": "string", "format": "uri-reference"},
-          "rel": {
-            "type": "string",
-            "enum": ["self", "next", "prev", "collection"]
-          },
-          "type": {"type": "string"},
-          "title": {"type": "string"}
-        }
-      }
+      "items": {"$ref": "#/$defs/link"}
     }
   }
 }
