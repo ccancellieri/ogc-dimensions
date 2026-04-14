@@ -2,6 +2,7 @@
 
 import pytest
 
+from ogc_dimensions.providers.base import InverseError
 from ogc_dimensions.providers.integer_range import IntegerRangeConfig, IntegerRangeProvider
 
 
@@ -62,23 +63,22 @@ class TestExtent:
 class TestInverse:
     def test_inverse_exact_boundary(self, gen):
         inv = gen.inverse("100")
-        assert inv.valid is True
-        assert inv.member == "100"
-        assert inv.range == {"start": "100", "end": "199"}
+        assert inv.code == "100"
+        assert inv.extra["lower"] == 100
+        assert inv.extra["upper"] == 199
 
     def test_inverse_mid_band(self, gen):
         inv = gen.inverse("1234")
-        assert inv.valid is True
-        assert inv.member == "1200"
+        assert inv.code == "1200"
 
     def test_inverse_zero(self, gen):
         inv = gen.inverse("0")
-        assert inv.valid is True
-        assert inv.member == "0"
+        assert inv.code == "0"
 
     def test_inverse_invalid(self, gen):
-        inv = gen.inverse("abc")
-        assert inv.valid is False
+        with pytest.raises(InverseError) as excinfo:
+            gen.inverse("abc")
+        assert excinfo.value.code == "InvalidFormat"
 
 
 class TestSearch:

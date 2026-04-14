@@ -49,21 +49,21 @@ ogc-dimensions/
 │   └── references.bib            # Bibliography
 ├── reference-implementation/     # Reference implementation (pip: ogc-dimensions)
 │   ├── src/ogc_dimensions/
-│   │   ├── generators/           # Python generator algorithms
-│   │   │   ├── base.py           # Abstract generator protocol (DimensionGenerator)
-│   │   │   ├── dekadal.py        # Dekadal generator (36/year, D1-D3 per month)
-│   │   │   ├── pentadal.py       # Pentadal generators (monthly 72/year + annual 73/year)
-│   │   │   ├── daily_period.py   # Generic daily-period generator
-│   │   │   ├── integer_range.py  # Integer range generator (elevation, indices)
-│   │   │   └── tree.py           # Tree/hierarchy generator (admin boundaries, indicator catalogs)
+│   │   ├── providers/            # Python dimension providers (member producers)
+│   │   │   ├── base.py           # Abstract producer protocol (DimensionProvider)
+│   │   │   ├── dekadal.py        # Dekadal provider (36/year, D1-D3 per month)
+│   │   │   ├── pentadal.py       # Pentadal providers (monthly 72/year + annual 73/year)
+│   │   │   ├── daily_period.py   # Generic daily-period provider
+│   │   │   ├── integer_range.py  # Integer range provider (elevation, indices)
+│   │   │   └── tree.py           # Tree/hierarchy provider (admin boundaries, indicator catalogs)
 │   │   └── api/                  # FastAPI application
 │   │       ├── app.py            # API entry point + dimension registry
 │   │       └── routes.py         # All endpoints (see API Surface below)
 │   └── tests/                    # pytest test suite
 │       ├── test_api.py           # Integration tests (all endpoints)
-│       ├── test_daily_period.py  # Daily period generator unit tests
-│       ├── test_integer_range.py # Integer range generator unit tests
-│       └── test_tree.py          # Tree generator unit tests
+│       ├── test_daily_period.py  # Daily period provider unit tests
+│       ├── test_integer_range.py # Integer range provider unit tests
+│       └── test_tree.py          # Tree provider unit tests
 ├── docs/                         # GitHub Pages documentation
 ├── CHANGELOG.md
 ├── LICENSE                       # Apache-2.0

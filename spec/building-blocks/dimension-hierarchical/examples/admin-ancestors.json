@@ -1,0 +1,60 @@
+{
+  "type": "FeatureCollection",
+  "numberMatched": 3,
+  "numberReturned": 3,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "AF",
+      "geometry": null,
+      "properties": {
+        "title": "Africa",
+        "type": "dimension-member",
+        "dimension:type": "nominal",
+        "dimension:code": "AF",
+        "dimension:level": 0
+      },
+      "links": [
+        {"href": "/collections/admin-boundaries/items/AF", "rel": "self", "type": "application/geo+json"},
+        {"href": "/collections/admin-boundaries/items?parent=AF", "rel": "children", "type": "application/geo+json"}
+      ]
+    },
+    {
+      "type": "Feature",
+      "id": "KE",
+      "geometry": null,
+      "properties": {
+        "title": "Kenya",
+        "type": "dimension-member",
+        "dimension:type": "nominal",
+        "dimension:code": "KE",
+        "dimension:parent": "AF",
+        "dimension:level": 1
+      },
+      "links": [
+        {"href": "/collections/admin-boundaries/items/KE", "rel": "self", "type": "application/geo+json"},
+        {"href": "/collections/admin-boundaries/items?parent=KE", "rel": "children", "type": "application/geo+json"}
+      ]
+    },
+    {
+      "type": "Feature",
+      "id": "KE-NRB",
+      "geometry": null,
+      "properties": {
+        "title": "Nairobi",
+        "type": "dimension-member",
+        "dimension:type": "nominal",
+        "dimension:code": "KE-NRB",
+        "dimension:parent": "KE",
+        "dimension:level": 2
+      },
+      "links": [
+        {"href": "/collections/admin-boundaries/items/KE-NRB", "rel": "self", "type": "application/geo+json"}
+      ]
+    }
+  ],
+  "links": [
+    {"rel": "self", "href": "/collections/admin-boundaries/ancestors?member=KE-NRB", "type": "application/geo+json"},
+    {"rel": "collection", "href": "/collections/admin-boundaries", "type": "application/json"}
+  ]
+}

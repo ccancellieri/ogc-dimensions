@@ -31,7 +31,7 @@ from typing import Any
 from .base import (
     DimensionProvider,
     ExtentResult,
-    GeneratedMember,
+    ProducedMember,
     ProviderConfig,
     PaginatedResult,
     SearchProtocol,
@@ -103,8 +103,8 @@ def _to_member(
     node: dict[str, Any],
     index: int,
     has_children: bool = False,
-) -> GeneratedMember:
-    return GeneratedMember(
+) -> ProducedMember:
+    return ProducedMember(
         value=node,
         index=index,
         code=node["code"],
@@ -147,7 +147,7 @@ def _paginate_nodes(
             collation.  Mirrors the ``?language=`` query parameter
             (STAC API Language Extension).
         has_children_fn: Optional callable ``(code) -> bool`` used to set
-            ``GeneratedMember.has_children`` on each returned member.
+            ``ProducedMember.has_children`` on each returned member.
     """
     if sort_by:
         reverse = sort_dir == "desc"

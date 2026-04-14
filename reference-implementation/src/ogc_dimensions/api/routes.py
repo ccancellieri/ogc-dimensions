@@ -30,6 +30,7 @@ from pydantic import BaseModel
 from ..providers import (
     DailyPeriodProvider,
     DimensionProvider,
+    InverseError,
     IntegerRangeProvider,
     LeveledTreeProvider,
     StaticTreeProvider,
@@ -149,7 +150,7 @@ def _member_to_feature(
     gen: DimensionProvider | None = None,
     dim_base_url: str | None = None,
 ) -> dict[str, Any]:
-    """Convert a ``GeneratedMember`` to a GeoJSON Feature (OGC Record).
+    """Convert a ``ProducedMember`` to a GeoJSON Feature (OGC Record).
 
     Follows the ``dimension-member`` building block schema:
     ``type: Feature``, ``id``, ``geometry: null``, ``properties``
@@ -579,10 +580,15 @@ async def extent(
 
 @router.get("/{dimension_id}/inverse")
 async def inverse(
+    request: Request,
     dimension_id: str,
     value: str = Query(..., description="Value to map to a dimension member"),
 ):
-    """Map a value to its dimension member (single value)."""
+    """Map a value to its dimension member.
+
+    Returns the member Record as a GeoJSON Feature on success, or
+    ``404 {code, description[, nearest]}`` if the value cannot be mapped.
+    """
     cfg = _get_dimension(dimension_id)
     gen = cfg.provider
     if not gen.invertible:
@@ -592,33 +598,37 @@ async def inverse(
             f"is not invertible and does not support inverse.",
         )
 
-    result = gen.inverse(value)
-    response: dict[str, Any] = {"valid": result.valid, "dimension": dimension_id}
+    try:
+        member = gen.inverse(value)
+    except InverseError as err:
+        return JSONResponse(status_code=404, content=err.to_dict())
 
-    if result.valid:
-        response["member"] = result.member
-        response["coordinate"] = result.coordinate
-        response["range"] = result.range
-        response["index"] = result.index
-    else:
-        response["reason"] = result.reason
-        if result.nearest:
-            response["nearest"] = result.nearest
-
-    return response
+    dim_base = _parent_url(request)
+    return _member_to_feature(
+        member,
+        dim_type=cfg.dimension_type,
+        gen=gen,
+        dim_base_url=dim_base,
+    )
 
 
 class BatchInverseRequest(BaseModel):
     values: list[str]
-    on_invalid: str = "reject"
 
 
 @router.post("/{dimension_id}/inverse")
 async def inverse_batch(
+    request: Request,
     dimension_id: str,
-    request: BatchInverseRequest,
+    body: BatchInverseRequest,
 ):
-    """Batch inverse for pipeline operations."""
+    """Batch inverse for pipeline operations.
+
+    Returns a FeatureCollection of mapped members. Values that cannot be
+    mapped appear in a parallel ``errors`` array (not part of the normative
+    ``dimension-inverse`` conformance class — batch is an implementation
+    convenience).
+    """
     cfg = _get_dimension(dimension_id)
     gen = cfg.provider
     if not gen.invertible:
@@ -628,21 +638,28 @@ async def inverse_batch(
             f"is not invertible.",
         )
 
-    results = gen.inverse_batch(request.values, on_invalid=request.on_invalid)
+    dim_base = _parent_url(request)
+    features: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    for value, result in zip(body.values, gen.inverse_batch(body.values)):
+        if isinstance(result, InverseError):
+            errors.append({"value": value, **result.to_dict()})
+        else:
+            features.append(
+                _member_to_feature(
+                    result,
+                    dim_type=cfg.dimension_type,
+                    gen=gen,
+                    dim_base_url=dim_base,
+                )
+            )
 
     return {
-        "dimension": dimension_id,
-        "provider": gen.provider_type,
-        "count": len(results),
-        "results": [
-            {
-                "valid": r.valid,
-                **({"member": r.member, "index": r.index} if r.valid else {}),
-                **({"reason": r.reason} if not r.valid else {}),
-                **({"nearest": r.nearest} if r.nearest else {}),
-            }
-            for r in results
-        ],
+        "type": "FeatureCollection",
+        "numberMatched": len(features),
+        "numberReturned": len(features),
+        "features": features,
+        "errors": errors,
     }
 
 
@@ -809,7 +826,7 @@ async def ancestors(
 
     dim_base = _parent_url(request)
 
-    # ancestors() returns list[dict] (raw node dicts), not GeneratedMember
+    # ancestors() returns list[dict] (raw node dicts), not ProducedMember
     features = [
         _ancestor_dict_to_feature(node, dim_type=cfg.dimension_type, gen=gen, dim_base_url=dim_base)
         for node in chain

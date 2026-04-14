@@ -1,0 +1,22 @@
+{
+  "type": "Feature",
+  "id": "2024-D08",
+  "geometry": null,
+  "properties": {
+    "title": "2024 Dekad 08 (Mar 11-20)",
+    "type": "dimension-member",
+    "time": {
+      "interval": ["2024-03-11", "2024-03-20"]
+    },
+    "keywords": ["temporal", "dekadal"],
+    "dimension:type": "temporal",
+    "dimension:code": "2024-D08",
+    "dimension:index": 7,
+    "dimension:start": "2024-03-11",
+    "dimension:end": "2024-03-20"
+  },
+  "links": [
+    {"href": "/collections/temporal-dekadal/items/2024-D08", "rel": "self", "type": "application/geo+json"},
+    {"href": "/collections/temporal-dekadal", "rel": "collection", "type": "application/json"}
+  ]
+}

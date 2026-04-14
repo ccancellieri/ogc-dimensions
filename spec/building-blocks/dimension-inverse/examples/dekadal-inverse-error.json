@@ -1,0 +1,4 @@
+{
+  "code": "ValueOutOfExtent",
+  "description": "Value '1899-12-31' is outside the extent of dimension 'temporal-dekadal' (earliest supported dekad starts 1901-01-01)."
+}

@@ -1,13 +1,13 @@
 """Abstract base for dimension providers.
 
-Defines the Protocol that all generators must implement,
+Defines the Protocol that all providers must implement,
 mapping to the conformance levels in the specification:
   Basic      = generate + extent
   Invertible = + inverse
   Searchable = + search (exact, range, like)
   Similarity = + search (vector)
 
-Three distinct input categories exist for any generator:
+Three distinct input categories exist for any provider:
 
   config     — Author-set constants, fixed at Collection-authoring time.
                Exposed via the 'config' field in the provider JSON object
@@ -54,8 +54,8 @@ class ProviderConfig:
 
     Subclasses declare the author-set constants that parameterise a specific
     provider algorithm.  These values are static for the lifetime of the
-    Collection and map 1:1 to the ``config`` field in the generator JSON
-    object.  Generators with no configurable constants subclass this with no
+    Collection and map 1:1 to the ``config`` field in the provider JSON
+    object.  Providers with no configurable constants subclass this with no
     additional fields and return an instance of their empty subclass from the
     ``config`` property.
     """
@@ -66,8 +66,8 @@ class ProviderConfig:
 
 
 @dataclass
-class GeneratedMember:
-    """A single generated dimension member."""
+class ProducedMember:
+    """A single produced dimension member."""
 
     value: Any
     index: int
@@ -78,17 +78,31 @@ class GeneratedMember:
     has_children: bool = False
 
 
-@dataclass
-class InverseResult:
-    """Result of an inverse operation."""
+class InverseError(Exception):
+    """Raised by ``DimensionProvider.inverse`` when a value cannot be mapped to a member.
 
-    valid: bool
-    member: str | None = None
-    coordinate: dict[str, Any] | None = None
-    range: dict[str, str] | None = None
-    index: int | None = None
-    nearest: str | None = None
-    reason: str | None = None
+    Carries the OGC-style error payload used in the ``dimension-inverse``
+    Building Block schema: ``{code, description}`` plus an optional
+    ``nearest`` member hint.
+    """
+
+    def __init__(
+        self,
+        code: str,
+        description: str,
+        *,
+        nearest: str | None = None,
+    ) -> None:
+        super().__init__(description)
+        self.code = code
+        self.description = description
+        self.nearest = nearest
+
+    def to_dict(self) -> dict[str, Any]:
+        body: dict[str, Any] = {"code": self.code, "description": self.description}
+        if self.nearest is not None:
+            body["nearest"] = self.nearest
+        return body
 
 
 @dataclass
@@ -104,12 +118,12 @@ class ExtentResult:
 
 @dataclass
 class PaginatedResult:
-    """Paginated list of generated members."""
+    """Paginated list of produced members."""
 
     dimension: str
     number_matched: int
     number_returned: int
-    members: list[GeneratedMember]
+    members: list[ProducedMember]
     offset: int = 0
     limit: int = 100
 
@@ -137,24 +151,24 @@ class DimensionProvider(ABC):
         values set by the data author when declaring the dimension.  These are
         exposed via the ``/dimensions`` list and ``/queryables`` endpoints so
         clients can discover the exact parameterisation without reading server
-        source code.  Generators with no configurable constants return an
+        source code.  Providers with no configurable constants return an
         instance of their empty config subclass (``as_dict()`` → ``{}``).
         """
         ...
 
     def config_as_dict(self) -> dict[str, Any]:
-        """Return generator config as a plain JSON-serialisable dict."""
+        """Return provider config as a plain JSON-serialisable dict."""
         return self.config.as_dict()
 
     @property
     @abstractmethod
     def invertible(self) -> bool:
-        """Whether this generator supports inverse operations."""
+        """Whether this provider supports inverse operations."""
         ...
 
     @property
     def hierarchical(self) -> bool:
-        """Whether this generator supports Hierarchical conformance level."""
+        """Whether this provider supports Hierarchical conformance level."""
         return False
 
     @property
@@ -184,7 +198,7 @@ class DimensionProvider(ABC):
         offset: int = 0,
         **params: Any,
     ) -> PaginatedResult:
-        """Generate paginated dimension members within extent."""
+        """Produce paginated dimension members within extent."""
         ...
 
     @abstractmethod
@@ -192,17 +206,36 @@ class DimensionProvider(ABC):
         """Return dimension boundaries."""
         ...
 
-    def inverse(self, value: str) -> InverseResult:
-        """Map a value back to its dimension member. Requires invertible=True."""
+    def inverse(self, value: str) -> ProducedMember:
+        """Map *value* to the dimension member that contains it.
+
+        Returns a :class:`ProducedMember` identical to what ``generate``
+        would emit for that member. Raises :class:`InverseError` when the
+        value cannot be mapped (out of extent, unparseable, etc.).
+
+        Requires ``invertible = True``.
+        """
         raise NotImplementedError(
-            f"Generator '{self.provider_type}' does not support inverse operations."
+            f"Provider '{self.provider_type}' does not support inverse operations."
         )
 
     def inverse_batch(
-        self, values: list[str], on_invalid: str = "reject"
-    ) -> list[InverseResult]:
-        """Batch inverse for pipeline operations."""
-        return [self.inverse(v) for v in values]
+        self, values: list[str]
+    ) -> list[ProducedMember | InverseError]:
+        """Batch inverse for pipeline operations.
+
+        Returns one entry per input value, in order. Each entry is either a
+        :class:`ProducedMember` (success) or an :class:`InverseError`
+        (failure). This is an implementation convenience — it is **not**
+        part of the ``dimension-inverse`` conformance class.
+        """
+        results: list[ProducedMember | InverseError] = []
+        for v in values:
+            try:
+                results.append(self.inverse(v))
+            except InverseError as e:
+                results.append(e)
+        return results
 
     def search(
         self,
@@ -213,7 +246,7 @@ class DimensionProvider(ABC):
     ) -> PaginatedResult:
         """Search for dimension members matching a query."""
         raise NotImplementedError(
-            f"Generator '{self.provider_type}' does not support "
+            f"Provider '{self.provider_type}' does not support "
             f"search protocol '{protocol}'."
         )
 
@@ -225,7 +258,7 @@ class DimensionProvider(ABC):
     ) -> PaginatedResult:
         """Return paginated direct children of parent_code (Hierarchical conformance)."""
         raise NotImplementedError(
-            f"Generator '{self.provider_type}' does not support Hierarchical operations."
+            f"Provider '{self.provider_type}' does not support Hierarchical operations."
         )
 
     def has_children(self, member_code: str) -> bool:
@@ -233,12 +266,12 @@ class DimensionProvider(ABC):
 
         Used to decide whether to emit a ``children`` navigation link for a
         member.  The default implementation returns ``False``; hierarchical
-        generators SHOULD override this.
+        providers SHOULD override this.
         """
         return False
 
     def ancestors(self, member_code: str) -> list[dict[str, Any]]:
         """Return ancestor chain from root to member_code inclusive (Hierarchical conformance)."""
         raise NotImplementedError(
-            f"Generator '{self.provider_type}' does not support Hierarchical operations."
+            f"Provider '{self.provider_type}' does not support Hierarchical operations."
         )

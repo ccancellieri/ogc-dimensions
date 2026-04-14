@@ -19,9 +19,9 @@ from typing import Any
 from .base import (
     DimensionProvider,
     ExtentResult,
-    GeneratedMember,
+    ProducedMember,
     ProviderConfig,
-    InverseResult,
+    InverseError,
     PaginatedResult,
     SearchProtocol,
 )
@@ -67,14 +67,14 @@ class IntegerRangeProvider(DimensionProvider):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _members(self, min_val: int, max_val: int) -> list[GeneratedMember]:
-        members: list[GeneratedMember] = []
+    def _members(self, min_val: int, max_val: int) -> list[ProducedMember]:
+        members: list[ProducedMember] = []
         idx = 0
         val = min_val
         while val <= max_val:
             upper = min(val + self.step - 1, max_val)
             members.append(
-                GeneratedMember(
+                ProducedMember(
                     value=val,
                     index=idx,
                     code=str(val),
@@ -138,24 +138,24 @@ class IntegerRangeProvider(DimensionProvider):
     # Invertible conformance
     # ------------------------------------------------------------------
 
-    def inverse(self, value: str) -> InverseResult:
+    def inverse(self, value: str) -> ProducedMember:
         try:
             val = int(value)
-        except (ValueError, TypeError):
-            return InverseResult(valid=False, reason=f"Cannot parse '{value}' as integer.")
+        except (ValueError, TypeError) as exc:
+            raise InverseError(
+                code="InvalidFormat",
+                description=f"Cannot parse '{value}' as an integer.",
+            ) from exc
 
-        # Floor to nearest step boundary (handles negative values correctly
-        # via Python's floor division)
         bin_start = (val // self.step) * self.step
         index = bin_start // self.step
         upper = bin_start + self.step - 1
 
-        return InverseResult(
-            valid=True,
-            member=str(bin_start),
-            coordinate={"value": bin_start},
-            range={"start": str(bin_start), "end": str(upper)},
+        return ProducedMember(
+            value=bin_start,
             index=index,
+            code=str(bin_start),
+            extra={"lower": bin_start, "upper": upper},
         )
 
     # ------------------------------------------------------------------

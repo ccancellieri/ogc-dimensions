@@ -2,6 +2,7 @@
 
 import pytest
 
+from ogc_dimensions.providers.base import InverseError
 from ogc_dimensions.providers.daily_period import DailyPeriodConfig, DailyPeriodProvider
 
 
@@ -126,13 +127,13 @@ class TestDekadalInverse:
     ])
     def test_inverse(self, dekadal, date_str, expected_code):
         inv = dekadal.inverse(date_str)
-        assert inv.valid is True
-        assert inv.member == expected_code
+        assert inv.code == expected_code
 
     def test_inverse_invalid(self, dekadal):
-        inv = dekadal.inverse("not-a-date")
-        assert inv.valid is False
-        assert inv.reason is not None
+        with pytest.raises(InverseError) as excinfo:
+            dekadal.inverse("not-a-date")
+        assert excinfo.value.code
+        assert excinfo.value.description
 
 
 # ---------------------------------------------------------------------------
@@ -171,8 +172,7 @@ class TestPentadalMonthlyInverse:
     ])
     def test_inverse(self, pentadal_monthly, date_str, expected_code):
         inv = pentadal_monthly.inverse(date_str)
-        assert inv.valid is True
-        assert inv.member == expected_code
+        assert inv.code == expected_code
 
 
 # ---------------------------------------------------------------------------
@@ -220,8 +220,7 @@ class TestPentadalAnnualInverse:
     ])
     def test_inverse(self, pentadal_annual, date_str, expected_code):
         inv = pentadal_annual.inverse(date_str)
-        assert inv.valid is True
-        assert inv.member == expected_code
+        assert inv.code == expected_code
 
 
 # ---------------------------------------------------------------------------

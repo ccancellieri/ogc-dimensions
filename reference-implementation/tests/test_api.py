@@ -156,14 +156,22 @@ class TestInverse:
         r = client.get("/dimensions/dekadal/inverse?value=2024-01-15")
         assert r.status_code == 200
         data = r.json()
-        assert data["valid"] is True
-        assert data["member"] == "2024-K02"
+        assert data["type"] == "Feature"
+        assert data["id"] == "2024-K02"
 
     def test_integer_range_inverse(self):
         r = client.get("/dimensions/integer-range/inverse?value=1234")
+        assert r.status_code == 200
         data = r.json()
-        assert data["valid"] is True
-        assert data["member"] == "1200"
+        assert data["type"] == "Feature"
+        assert data["id"] == "1200"
+
+    def test_inverse_invalid_returns_error(self):
+        r = client.get("/dimensions/dekadal/inverse?value=not-a-date")
+        assert r.status_code == 404
+        data = r.json()
+        assert "code" in data
+        assert "description" in data
 
     def test_non_invertible_501(self):
         r = client.get("/dimensions/world-admin/inverse?value=AFR")
@@ -176,8 +184,25 @@ class TestInverse:
         )
         assert r.status_code == 200
         data = r.json()
-        assert data["count"] == 2
-        assert data["results"][0]["valid"] is True
+        assert data["type"] == "FeatureCollection"
+        assert data["numberMatched"] == 2
+        assert data["numberReturned"] == 2
+        assert len(data["features"]) == 2
+        assert data["errors"] == []
+        assert data["features"][0]["type"] == "Feature"
+
+    def test_batch_inverse_with_errors(self):
+        r = client.post(
+            "/dimensions/dekadal/inverse",
+            json={"values": ["2024-01-15", "not-a-date"]},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["numberMatched"] == 1
+        assert len(data["features"]) == 1
+        assert len(data["errors"]) == 1
+        assert data["errors"][0]["value"] == "not-a-date"
+        assert "code" in data["errors"][0]
 
 
 class TestSearch:

@@ -8,7 +8,7 @@
 
 ## Title
 
-feat: add `size`, `href`, `generator`, `hierarchy`, `nominal`/`ordinal` types, multilingual labels, and sort order for scalable dimension members
+feat: add `size`, `href`, `provider`, `hierarchy`, `nominal`/`ordinal` types, multilingual labels, and sort order for scalable dimension members
 
 ## Description
 
@@ -18,10 +18,10 @@ Adds seven optional, backwards-compatible additions to the dimension object sche
 
 - **`size`** (integer): total member count -- resolves #31
 - **`href`** (URI): link to paginated endpoint returning dimension values
-- **`generator`** (object): algorithmic member generation with OpenAPI discovery, `config`/`parameters` separation, and `language_support`
+- **`provider`** (object): algorithmic member generation with OpenAPI discovery, `config`/`parameters` separation, and `language_support`
 - **`hierarchy`** (object): tree structure for hierarchical dimensions (recursive and leveled strategies)
 - **`nominal`** / **`ordinal`**: two new dimension type values for coded dimensions
-- **Multi-language labels**: `labels` map on members, `language_support` on generators, aligned with STAC Language Extension
+- **Multi-language labels**: `labels` map on members, `language_support` on providers, aligned with STAC Language Extension
 - **Sort order**: `sort_by` / `sort_dir` standard query parameters
 
 ### Changes
@@ -43,8 +43,8 @@ Add to `properties`:
   "format": "uri-reference",
   "description": "Link to a paginated endpoint returning dimension values. When present, values MAY be omitted."
 },
-"generator": {
-  "$ref": "#/$defs/generator",
+"provider": {
+  "$ref": "#/$defs/provider",
   "description": "Algorithmic member generation definition."
 },
 "hierarchy": {
@@ -56,26 +56,26 @@ Add to `properties`:
 Add to `$defs`:
 
 ```json
-"generator": {
+"provider": {
   "type": "object",
   "required": ["type", "output"],
   "properties": {
     "type": {
-      "description": "Well-known algorithm identifier or custom generator URI. Well-known types: 'daily-period' (sub-monthly temporal periods configured by config.period_days and config.scheme), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). Custom generators use a full URI as the type value.",
+      "description": "Well-known algorithm identifier or custom provider URI. Well-known types: 'daily-period' (sub-monthly temporal periods configured by config.period_days and config.scheme), 'integer-range' (evenly-spaced integer bins), 'static-tree' (recursive in-memory hierarchy), 'leveled-tree' (leveled in-memory hierarchy with ?level=N filtering). Custom providers use a full URI as the type value.",
       "type": "string"
     },
     "api": {
       "type": "string",
       "format": "uri",
-      "description": "OpenAPI definition URI. REQUIRED when type is a full URI (custom generator). For well-known types the API definition is implicit."
+      "description": "OpenAPI definition URI. REQUIRED when type is a full URI (custom provider). For well-known types the API definition is implicit."
     },
     "config": {
       "type": "object",
-      "description": "Author-set configuration values for this generator instance. Static constants fixed at collection-authoring time, not overridable by API clients per-request. They configure the generator algorithm itself (e.g., period_days and scheme for temporal periods, step for integer ranges). Well-known generators with no author-configurable constants SHOULD omit this field or set it to {}.",
+      "description": "Author-set configuration values for this provider instance. Static constants fixed at collection-authoring time, not overridable by API clients per-request. They configure the provider algorithm itself (e.g., period_days and scheme for temporal periods, step for integer ranges). Well-known providers with no author-configurable constants SHOULD omit this field or set it to {}.",
       "additionalProperties": true
     },
     "parameters": {
-      "description": "JSON Schema 2020-12 document describing query-time parameters that clients may pass per request to /members, /children, and /search. NOT static configuration values -- use 'config' for author-set constants. Standard cross-generator parameters (SHOULD be declared here): 'language' (RFC 5646 Language-Tag), 'sort_by' (output field name), 'sort_dir' ('asc'|'desc').",
+      "description": "JSON Schema 2020-12 document describing query-time parameters that clients may pass per request to /members, /children, and /search. NOT static configuration values -- use 'config' for author-set constants. Standard cross-provider parameters (SHOULD be declared here): 'language' (RFC 5646 Language-Tag), 'sort_by' (output field name), 'sort_dir' ('asc'|'desc').",
       "$ref": "https://json-schema.org/draft/2020-12/schema"
     },
     "output": {
@@ -85,17 +85,17 @@ Add to `$defs`:
     "invertible": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the generator supports /inverse (Invertible conformance level)."
+      "description": "Whether the provider supports /inverse (Invertible conformance level)."
     },
     "hierarchical": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the generator supports /children and /ancestors (Hierarchical conformance level)."
+      "description": "Whether the provider supports /children and /ancestors (Hierarchical conformance level)."
     },
     "navigable": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the generator supports per-member navigation links (rel:children, rel:ancestors) when clients pass ?links=true. Requires hierarchical: true."
+      "description": "Whether the provider supports per-member navigation links (rel:children, rel:ancestors) when clients pass ?links=true. Requires hierarchical: true."
     },
     "search": {
       "type": "array",
@@ -112,7 +112,7 @@ Add to `$defs`:
     },
     "language_support": {
       "type": "array",
-      "description": "Languages the generator can serve member labels in. Each entry is a Language Object aligned with the STAC Language Extension. When present, clients MAY request a specific language via the 'language' query parameter (RFC 5646) or Accept-Language header.",
+      "description": "Languages the provider can serve member labels in. Each entry is a Language Object aligned with the STAC Language Extension. When present, clients MAY request a specific language via the 'language' query parameter (RFC 5646) or Accept-Language header.",
       "items": {
         "type": "object",
         "required": ["code"],
@@ -146,7 +146,7 @@ Add to `$defs`:
     },
     "root_filter": {
       "type": "string",
-      "description": "Generator parameter expression that selects root members. For recursive generators, root members are those whose parent_property is null if omitted."
+      "description": "Provider parameter expression that selects root members. For recursive providers, root members are those whose parent_property is null if omitted."
     },
     "depth": {
       "type": "integer",
@@ -171,7 +171,7 @@ Add to `$defs`:
           "parent_level": {"type": "string"},
           "member_id_property": {"type": "string", "description": "Output field that uniquely identifies members at this level. Defaults to 'code'."},
           "parent_id_property": {"type": "string", "description": "Output field holding the parent member identifier (from parent level)."},
-          "parameters": {"type": "object", "description": "Generator parameters that select members at this level."},
+          "parameters": {"type": "object", "description": "Provider parameters that select members at this level."},
           "href": {
             "type": "string",
             "format": "uri-reference",
@@ -192,19 +192,19 @@ Add to `type` enum: `"nominal"`, `"ordinal"`.
 Add section "Scalable Dimensions" documenting:
 - `size` -- when to use, relationship to `values`
 - `href` -- pagination conventions (OGC API - Common Part 2)
-- `generator` -- well-known types (`daily-period`, `integer-range`, `static-tree`, `leveled-tree`), custom generators, `config` vs `parameters`, conformance levels
+- `provider` -- well-known types (`daily-period`, `integer-range`, `static-tree`, `leveled-tree`), custom providers, `config` vs `parameters`, conformance levels
 - `hierarchy` -- recursive and leveled strategies, `/children` and `/ancestors` endpoints, `has_children`, `navigable`
 - `nominal`/`ordinal` -- when to use instead of `other`
-- Multi-language labels -- `language_support` on generator, `labels` on members and hierarchy levels, STAC Language Extension alignment
+- Multi-language labels -- `language_support` on provider, `labels` on members and hierarchy levels, STAC Language Extension alignment
 - Sort order -- `sort_by`, `sort_dir`, `rank` for ordinal dimensions
 
 #### Examples
 
 Add or update examples showing:
-- Temporal dimension with dekadal generator (`daily-period` type, `config`, paginated, invertible, searchable)
+- Temporal dimension with dekadal provider (`daily-period` type, `config`, paginated, invertible, searchable)
 - Hierarchical dimension with admin boundaries (leveled, multilingual `labels`, `href` per level, `language_support`)
 - Hierarchical dimension with indicator tree (recursive, custom URI type)
-- Non-temporal dimension with integer-range generator
+- Non-temporal dimension with integer-range provider
 - Legacy compatibility via `?format=datetime`
 
 ### Backwards compatibility
@@ -215,8 +215,8 @@ All additions are optional. No existing properties are modified. Existing collec
 
 - JSON Schema validates against JSON Schema 2020-12 meta-schema
 - Worked examples validate against the extended schema
-- Reference implementation demonstrates all generator endpoints across 5 conformance levels
-- 120+ tests passing in the reference implementation
+- Reference implementation demonstrates all provider endpoints across 5 conformance levels
+- 138 tests passing in the reference implementation (`pytest tests/`)
 - Live demo: https://data.review.fao.org/geospatial/v2/api/tools/docs
 - Interactive notebooks: [Creating Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/01_creating_dimensions.ipynb), [ASIS Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/02_asis_dimensions.ipynb)
 

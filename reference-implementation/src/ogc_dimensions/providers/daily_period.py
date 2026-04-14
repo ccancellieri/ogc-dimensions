@@ -1,4 +1,4 @@
-"""Unified daily-period dimension generator.
+"""Unified daily-period dimension provider.
 
 Covers any sub-monthly period defined by a fixed number of days:
 
@@ -30,9 +30,9 @@ from typing import Any
 from .base import (
     DimensionProvider,
     ExtentResult,
-    GeneratedMember,
+    ProducedMember,
     ProviderConfig,
-    InverseResult,
+    InverseError,
     PaginatedResult,
     SearchProtocol,
 )
@@ -85,11 +85,11 @@ def _monthly_members(
     start_year: int,
     end_year: int,
     period_days: int,
-) -> list[GeneratedMember]:
+) -> list[ProducedMember]:
     """Generate all monthly-aligned periods between start_year and end_year."""
     prefix = _monthly_prefix(period_days)
     ppm = _periods_per_month(period_days)
-    members: list[GeneratedMember] = []
+    members: list[ProducedMember] = []
     idx = 0
     for year in range(start_year, end_year + 1):
         for month in range(1, 13):
@@ -106,7 +106,7 @@ def _monthly_members(
                 end = date(year, month, end_day)
 
                 members.append(
-                    GeneratedMember(
+                    ProducedMember(
                         value=start.isoformat(),
                         index=idx,
                         code=code,
@@ -160,10 +160,10 @@ def _annual_members(
     start_year: int,
     end_year: int,
     period_days: int,
-) -> list[GeneratedMember]:
+) -> list[ProducedMember]:
     """Generate all annual-aligned periods between start_year and end_year."""
     n_max = _annual_periods_count(period_days)
-    members: list[GeneratedMember] = []
+    members: list[ProducedMember] = []
     idx = 0
     for year in range(start_year, end_year + 1):
         jan1 = date(year, 1, 1)
@@ -181,7 +181,7 @@ def _annual_members(
 
             code = f"{year}-{_ANNUAL_PREFIX}{p:02d}"
             members.append(
-                GeneratedMember(
+                ProducedMember(
                     value=start.isoformat(),
                     index=idx,
                     code=code,
@@ -219,12 +219,12 @@ def _annual_inverse(
 
 
 # ---------------------------------------------------------------------------
-# Generator
+# Provider
 # ---------------------------------------------------------------------------
 
 
 class DailyPeriodProvider(DimensionProvider):
-    """Unified daily-period generator.
+    """Unified daily-period provider.
 
     Handles any fixed-length sub-monthly period aligned to either
     month boundaries (``scheme="monthly"``) or year start
@@ -261,7 +261,7 @@ class DailyPeriodProvider(DimensionProvider):
     # Internal
     # ------------------------------------------------------------------
 
-    def _all_members(self, start_year: int, end_year: int) -> list[GeneratedMember]:
+    def _all_members(self, start_year: int, end_year: int) -> list[ProducedMember]:
         if self.scheme == "annual":
             return _annual_members(start_year, end_year, self.period_days)
         return _monthly_members(start_year, end_year, self.period_days)
@@ -328,23 +328,26 @@ class DailyPeriodProvider(DimensionProvider):
     # Invertible conformance
     # ------------------------------------------------------------------
 
-    def inverse(self, value: str) -> InverseResult:
+    def inverse(self, value: str) -> ProducedMember:
         try:
             d = date.fromisoformat(value[:10])
-        except (ValueError, TypeError):
-            return InverseResult(valid=False, reason=f"Cannot parse '{value}' as a date.")
+        except (ValueError, TypeError) as exc:
+            raise InverseError(
+                code="InvalidFormat",
+                description=f"Cannot parse '{value}' as an ISO-8601 date.",
+            ) from exc
 
         if self.scheme == "annual":
-            code, start, end, index, coord = _annual_inverse(d, self.period_days)
+            code, start, end, index, _coord = _annual_inverse(d, self.period_days)
         else:
-            code, start, end, index, coord = _monthly_inverse(d, self.period_days)
+            code, start, end, index, _coord = _monthly_inverse(d, self.period_days)
 
-        return InverseResult(
-            valid=True,
-            member=code,
-            coordinate=coord,
-            range={"start": start.isoformat(), "end": end.isoformat()},
+        return ProducedMember(
+            value=start.isoformat(),
             index=index,
+            code=code,
+            start=start.isoformat(),
+            end=end.isoformat(),
         )
 
     # ------------------------------------------------------------------

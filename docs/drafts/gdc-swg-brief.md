@@ -21,10 +21,10 @@ This Change Request Proposal introduces seven backwards-compatible extensions to
 The proposal adds:
 1. **`size`** -- dimension member count (integer, RECOMMENDED)
 2. **`href`** -- link to paginated member endpoint (URI, OPTIONAL)
-3. **`generator`** -- algorithmic member generation with OpenAPI discovery, `config`/`parameters` separation, and `language_support` (object, OPTIONAL)
+3. **`provider`** -- algorithmic member generation with OpenAPI discovery, `config`/`parameters` separation, and `language_support` (object, OPTIONAL)
 4. **`hierarchy`** -- tree structure for hierarchical dimensions (object, OPTIONAL); two strategies: recursive (parent reference in member data) and leveled (hierarchy imposed by named level definitions)
 5. **`nominal` / `ordinal`** -- two new dimension type values for coded dimensions, more precise than the existing `other` fallback
-6. **Multi-language labels** -- `labels` map on members, `language_support` on generators, aligned with STAC Language Extension and OGC API - Records
+6. **Multi-language labels** -- `labels` map on members, `language_support` on providers, aligned with STAC Language Extension and OGC API - Records
 7. **Sort order** -- `sort_by` / `sort_dir` standard query parameters with locale-aware collation
 
 These properties are applicable to any dimension type (temporal, spatial, thematic) and follow existing OGC API conventions (Common Part 2 pagination, Features numberMatched/numberReturned, RFC 5988 link relations).
@@ -50,11 +50,11 @@ The GDC SWG charter (22-052) scopes "definition of the GDC metadata model" and "
 
 ### Non-Gregorian calendars
 
-Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in agricultural drought monitoring and food security early warning. No standard temporal encoding (ISO 8601, CF conventions, OGC temporal models) accommodates these systems. The generator abstraction provides a standard mechanism to define, enumerate, and validate arbitrary temporal systems.
+Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in agricultural drought monitoring and food security early warning. No standard temporal encoding (ISO 8601, CF conventions, OGC temporal models) accommodates these systems. The provider abstraction provides a standard mechanism to define, enumerate, and validate arbitrary temporal systems.
 
 ## Proposed conformance class
 
-**"Dimension Generators"** -- a new conformance class for the GDC API profile.
+**"Dimension Providers"** -- a new conformance class for the GDC API profile.
 
 ### Conformance levels
 
@@ -68,7 +68,7 @@ Dekadal (36/year) and pentadal (72 or 73/year) calendars are used globally in ag
 
 Standard cross-level query parameters: `language` (RFC 5646), `sort_by`, `sort_dir`.
 
-### Generator object schema
+### Provider object schema
 
 ```json
 {
@@ -88,9 +88,9 @@ Standard cross-level query parameters: `language` (RFC 5646), `sort_by`, `sort_d
 }
 ```
 
-The generator separates **`config`** (static author-set constants fixed at authoring time, e.g. `period_days`, `scheme`) from **`parameters`** (query-time client parameters per JSON Schema 2020-12). The `language_support` array declares available languages using Language Objects aligned with the STAC Language Extension.
+The provider separates **`config`** (static author-set constants fixed at authoring time, e.g. `period_days`, `scheme`) from **`parameters`** (query-time client parameters per JSON Schema 2020-12). The `language_support` array declares available languages using Language Objects aligned with the STAC Language Extension.
 
-Well-known generator types resolve to registered OGC Definition URIs:
+Well-known provider types resolve to registered OGC Definition URIs:
 
 | Type | Config | Use case |
 |---|---|---|
@@ -99,7 +99,7 @@ Well-known generator types resolve to registered OGC Definition URIs:
 | `static-tree` | -- | Recursive in-memory hierarchies |
 | `leveled-tree` | -- | Named-level hierarchies (admin boundaries) |
 
-Custom generators use a full URI as the type value and provide their own OpenAPI URI via the `api` field.
+Custom providers use a full URI as the type value and provide their own OpenAPI URI via the `api` field.
 
 ## OGC Records Profile
 
@@ -124,7 +124,7 @@ The proposal aligns with the [STAC Language Extension](https://github.com/stac-e
 
 - **Collection-level:** `language` / `languages` declarations via the STAC Language Extension (no new schema)
 - **Member-level:** `labels` map (keys = RFC 5646 Language-Tags, values = translated names) alongside default `label` string
-- **Generator-level:** `language_support` array declares available languages; clients use `?language=` or `Accept-Language` header
+- **Provider-level:** `language_support` array declares available languages; clients use `?language=` or `Accept-Language` header
 - **Sort collation:** `sort_by=label` combined with `?language=fr` applies locale-aware collation (Unicode Collation Algorithm)
 
 This enables administrative boundary names, indicator labels, and classification codes to be served in the user's preferred language through standard HTTP content negotiation.
@@ -132,10 +132,10 @@ This enables administrative boundary names, indicator labels, and classification
 ## Alignment with SWG approach
 
 The TB-20 pivot from standalone GDC standard to profile/integration approach directly supports this proposal:
-- The generator properties are **additive extensions** to the existing STAC `cube:dimensions` model
+- The provider properties are **additive extensions** to the existing STAC `cube:dimensions` model
 - The OGC Records profile ensures structural compatibility with the broader OGC API ecosystem
 - No existing properties are modified or removed
-- Servers can adopt incrementally (size-only, then href, then generators)
+- Servers can adopt incrementally (size-only, then href, then providers)
 - Legacy clients are unaffected (unknown properties are ignored per JSON processing rules)
 
 ## Supporting materials
@@ -155,7 +155,7 @@ The TB-20 pivot from standalone GDC standard to profile/integration approach dir
 
 A significant body of geospatial data is organized along hierarchical coded dimensions: GAUL administrative boundaries (Country → ADM1 → ADM2, ~50,000 total members), the FAO FAOSTAT indicator tree (Domain → Group → Indicator → Sub-indicator, ~10,000 members), and land cover classification hierarchies. SDMX 3.0 provides `HierarchicalCodelist` structures for statistical classifications, but SDMX structure endpoints return monolithic responses with no pagination. W3C SKOS `skos:broader`/`skos:narrower` encodes hierarchy semantics in RDF but is not accessible as paginated REST dimension metadata. The STAC API Children Extension defines `GET .../children` with `rel:children`/`rel:parent` link relations for Catalog/Collection trees -- the same endpoint contract applied one level lower to dimension member trees would close this gap.
 
-The proposed `hierarchy` property with recursive and leveled strategies generalizes the operational experience of the FAO geoid system, in which hierarchy rules encode SQL conditions per level alongside `item_code_field` and `parent_code_field` column mappings. The `parameters` object per level is the backend-agnostic form of these SQL conditions, keeping implementation details inside the generator while exposing only the parameter values in the specification. The `/children` endpoint contract mirrors the STAC API Children Extension pagination envelope exactly, allowing clients already consuming collection trees via that extension to reuse the same traversal code for dimension member trees.
+The proposed `hierarchy` property with recursive and leveled strategies generalizes the operational experience of the FAO geoid system, in which hierarchy rules encode SQL conditions per level alongside `item_code_field` and `parent_code_field` column mappings. The `parameters` object per level is the backend-agnostic form of these SQL conditions, keeping implementation details inside the provider while exposing only the parameter values in the specification. The `/children` endpoint contract mirrors the STAC API Children Extension pagination envelope exactly, allowing clients already consuming collection trees via that extension to reuse the same traversal code for dimension member trees.
 
 ## Prior art
 
@@ -170,6 +170,6 @@ The FAO Agricultural Stress Index System (ASIS) has operated a proprietary pagin
 ## Requested action
 
 1. Review the proposal at the next GDC SWG meeting
-2. Consider "Dimension Generators" as a work item / conformance class for the GDC specification
+2. Consider "Dimension Providers" as a work item / conformance class for the GDC specification
 3. Coordinate with the Temporal WKT SWG for calendar algorithm definitions
-4. Coordinate with the OGC Naming Authority for generator type URI registration
+4. Coordinate with the OGC Naming Authority for provider type URI registration
