@@ -1,0 +1,57 @@
+{
+  "type": "FeatureCollection",
+  "numberMatched": 36,
+  "numberReturned": 3,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "2024-K01",
+      "geometry": null,
+      "properties": {
+        "type": "dimension-member",
+        "dimension:type": "temporal",
+        "dimension:code": "2024-K01",
+        "dimension:index": 0,
+        "title": "2024-K01",
+        "time": {"interval": ["2024-01-01", "2024-01-10"]},
+        "dimension:start": "2024-01-01",
+        "dimension:end": "2024-01-10"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "2024-K02",
+      "geometry": null,
+      "properties": {
+        "type": "dimension-member",
+        "dimension:type": "temporal",
+        "dimension:code": "2024-K02",
+        "dimension:index": 1,
+        "title": "2024-K02",
+        "time": {"interval": ["2024-01-11", "2024-01-20"]},
+        "dimension:start": "2024-01-11",
+        "dimension:end": "2024-01-20"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "2024-K03",
+      "geometry": null,
+      "properties": {
+        "type": "dimension-member",
+        "dimension:type": "temporal",
+        "dimension:code": "2024-K03",
+        "dimension:index": 2,
+        "title": "2024-K03",
+        "time": {"interval": ["2024-01-21", "2024-01-31"]},
+        "dimension:start": "2024-01-21",
+        "dimension:end": "2024-01-31"
+      }
+    }
+  ],
+  "links": [
+    {"rel": "self", "href": "/dimensions/dekadal/items?limit=3&offset=0", "type": "application/geo+json"},
+    {"rel": "collection", "href": "/dimensions/dekadal", "type": "application/json"},
+    {"rel": "next", "href": "/dimensions/dekadal/items?limit=3&offset=3", "type": "application/geo+json"}
+  ]
+}

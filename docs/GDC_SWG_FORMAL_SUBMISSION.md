@@ -56,7 +56,7 @@ This is the load-bearing traceability table. Every normative claim in the brief 
 |---|---|---|---|---|
 | `…/conf/dimension-collection` | `ogc.api.dimensions.dimension-collection` | `spec/building-blocks/dimension-collection/schema.json` | `spec/building-blocks/dimension-collection/examples/temporal-dekadal.json` | `GET /dimensions/{id}` and `GET /dimensions/` |
 | `…/conf/dimension-member` | `ogc.api.dimensions.dimension-member` | `spec/building-blocks/dimension-member/schema.json` | `spec/building-blocks/dimension-member/examples/dekadal-member.json`; `…/hierarchical-member.json` | Member features inside `GET /dimensions/{id}/items` |
-| `…/conf/dimension-pagination` | `ogc.api.dimensions.dimension-pagination` | `spec/building-blocks/dimension-pagination/schema.json` | (envelope demonstrated in every `/items` response) | `GET /dimensions/{id}/items?limit=&offset=` |
+| `…/conf/dimension-pagination` | `ogc.api.dimensions.dimension-pagination` | `spec/building-blocks/dimension-pagination/schema.json` | `dimension-pagination/examples/dekadal-items-page1.json`; `…/dekadal-items-page2.json` (showing `next`+`prev`) | `GET /dimensions/{id}/items?limit=&offset=` |
 | `…/conf/dimension-inverse` | `ogc.api.dimensions.dimension-inverse` | `spec/building-blocks/dimension-inverse/schema.json` | `dimension-inverse/examples/dekadal-inverse-response.json` (success); `dimension-inverse/examples/dekadal-inverse-error.json` (out-of-extent) | `GET /dimensions/{id}/inverse?value=`; `POST /dimensions/{id}/inverse` (batch) |
 | `…/conf/dimension-hierarchical` | `ogc.api.dimensions.dimension-hierarchical` | `spec/building-blocks/dimension-hierarchical/schema.json` | `dimension-hierarchical/examples/admin-children.json`; `…/admin-ancestors.json` | `GET /dimensions/{id}/children?parent=`; `GET /dimensions/{id}/ancestors?member=` |
 
@@ -89,7 +89,7 @@ All five blocks depend on existing OGC standards only; no new top-level dependen
 - `provider` — slim object `{type, href}` pointing at the dimension Records collection (OPTIONAL)
 - `hierarchy` — descriptor for hierarchical dimensions (OPTIONAL)
 
-Existing fields (`type`, `extent`, `values`, `step`, `unit`, `reference_system`) are unchanged. STAC clients that ignore unknown properties continue to work; clients that follow `provider.href` discover paginated members and capability links via the Records collection. The companion STAC Datacube extension PR is drafted at `docs/drafts/stac-datacube-pr.md` and targets `stac-extensions/datacube` issue #31.
+Existing fields (`type`, `extent`, `values`, `step`, `unit`, `reference_system`) are unchanged. STAC clients that ignore unknown properties continue to work; clients that follow `provider.href` discover paginated members and capability links via the Records collection. The companion STAC Datacube extension PR is drafted at `docs/drafts/stac-datacube-pr.md`; it addresses `stac-extensions/datacube` issue #36 (scalable dimensions — superset track) and closes #31 (size property — subset resolved by the same change).
 
 ## 8. Reference implementation status
 
