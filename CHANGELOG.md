@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Paper / deployment notes
+- Paper §4.1 updated to note that the integrating GeoID catalog platform
+  now publishes a broader OGC API surface on the same service stack —
+  Records, Features, Coverages, Styles, Maps, Processes, the OGC Joins
+  draft, and a 3D GeoVolumes route shell — with the DimensionsExtension
+  coexisting as one more extension under the platform's
+  `ExtensionProtocol` / `OGCServiceMixin` seam. This strengthens the
+  building-block narrative: dimensions compose with the rest of the
+  OGC portfolio under a single `/conformance` aggregate rather than
+  standing alone.
+- No spec or reference-implementation code change. The `ogc-dimensions`
+  package continues to be a dependency of the GeoID `DimensionsExtension`;
+  the coexisting OGC extensions live in GeoID itself and are out of
+  scope for this repository.
+
 ## 1.0.0-rc.1 (2026-04-14)
 
 Release candidate aligned with OGC Building Blocks formal submission track.
