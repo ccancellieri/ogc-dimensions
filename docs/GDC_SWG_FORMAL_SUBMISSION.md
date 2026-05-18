@@ -119,7 +119,7 @@ Existing fields (`type`, `extent`, `values`, `step`, `unit`, `reference_system`)
 
 ## 11. Out of scope (explicitly deferred to future revisions)
 
-- *Similarity-driven navigation* (vector-embedding `/search`) — retained as an informative architectural hook in v1.0; no normative schema, no conformance class URI, no reference implementation in this release. Will be revisited once the underlying AI/ML metadata standards stabilize.
+- **Similarity-driven navigation** (`/search?similar=...`) — promoted to a normative conformance class in v1.0 (`dimension-similarity`). Servers without a backing vector index MUST return the prescribed `501 Not Implemented` problem-detail (`type: https://www.opengis.net/spec/ogc-dimensions/1.0/errors/similarity-not-implemented`); the conformance class URI is advertised at `/conformance` regardless, so clients can negotiate the capability surface against the spec even when the implementation is a stub.
 - EDR / Tiles / Styles / Coverages depth integration — out of charter for this CR; tracked separately in the FAO platform OGC compatibility roadmap.
 
 ## 12. Contact

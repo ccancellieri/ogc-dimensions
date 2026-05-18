@@ -53,6 +53,7 @@ OGC_DIMENSIONS_CONFORMANCE = [
     "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-pagination",
     "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-inverse",
     "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-hierarchical",
+    "http://www.opengis.net/spec/ogc-dimensions/1.0/conf/dimension-similarity",
 ]
 
 # ---------------------------------------------------------------------------
@@ -699,6 +700,7 @@ async def search(
     min: str | None = Query(None, description="Range minimum"),
     max: str | None = Query(None, description="Range maximum"),
     like: str | None = Query(None, description="Pattern match (fnmatch)"),
+    similar: str | None = Query(None, description="Vector-embedding k-NN reference value (Similarity conformance class)"),
     extent_min: str | None = Query(None, description="Extent minimum"),
     extent_max: str | None = Query(None, description="Extent maximum"),
     limit: int = Query(100, ge=1, le=10000),
@@ -706,12 +708,32 @@ async def search(
 ):
     """Search for dimension members matching a query.
 
-    Returns an OGC Records FeatureCollection.
+    Returns an OGC Records FeatureCollection. The ``similar=`` form
+    triggers the dimension-similarity conformance class; servers without
+    a backing vector index return the prescribed RFC 7807 problem-detail
+    with HTTP 501.
     """
     cfg = _get_dimension(dimension_id)
     gen = cfg.provider
     ext_min = extent_min or cfg.extent_min
     ext_max = extent_max or cfg.extent_max
+
+    # dimension-similarity conformance class — honest stub.
+    if similar is not None:
+        return JSONResponse(
+            status_code=501,
+            media_type="application/problem+json",
+            content={
+                "type": "https://www.opengis.net/spec/ogc-dimensions/1.0/errors/similarity-not-implemented",
+                "title": "Similarity search not implemented",
+                "status": 501,
+                "detail": (
+                    f"Server advertises ogc-dimensions/1.0/conf/dimension-similarity "
+                    f"but has no backing vector index for dimension '{dimension_id}'."
+                ),
+                "dimension": dimension_id,
+            },
+        )
 
     if exact is not None:
         protocol = SearchProtocol.EXACT
