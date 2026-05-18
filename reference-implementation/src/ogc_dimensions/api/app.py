@@ -13,7 +13,24 @@ Run: uvicorn ogc_dimensions.api.app:app --reload
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import router
+from .routes import DIMENSIONS, router
+
+
+def _assert_extent_consistent_with_generator() -> None:
+    """dimension-collection BB §"Extent derivation" — fail loud at startup
+    if any provider's reported extent disagrees with its generator size.
+    """
+    for dim_id, cfg in DIMENSIONS.items():
+        if not (cfg.extent_min and cfg.extent_max):
+            continue
+        ext = cfg.provider.extent(cfg.extent_min, cfg.extent_max)
+        page = cfg.provider.generate(cfg.extent_min, cfg.extent_max, limit=1, offset=0)
+        if ext.size != page.number_matched:
+            raise RuntimeError(
+                f"Dimension '{dim_id}': extent.size={ext.size} disagrees "
+                f"with generator number_matched={page.number_matched}. "
+                f"Extent MUST be derived from the generator (issue #5)."
+            )
 
 app = FastAPI(
     title="OGC Dimensions Reference Implementation",
@@ -35,6 +52,8 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/dimensions")
+
+_assert_extent_consistent_with_generator()
 
 
 @app.get("/")
