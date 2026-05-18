@@ -56,6 +56,34 @@ Servers **SHOULD** perform a startup-time assertion of the form
 `extent.size == generator.number_matched` and **SHOULD** fail loudly
 on inconsistency.
 
+### Shape dispatch on ExtentResult
+
+The shape of the rendered `extent` is fixed by the provider's
+`ExtentResult` and the collection's `dimension_type`. Exactly one of
+the three keys MUST be present:
+
+| ExtentResult signature | `dimension_type` | Rendered shape |
+|---|---|---|
+| `native_min`/`native_max` non-null | `temporal` | `{"temporal": {"interval": [[min, max]]}}` (RFC 3339) |
+| `native_min`/`native_max` non-null | any other ordinal type | `{"values": {"min": ..., "max": ...}}` |
+| `native_min`/`native_max` both `null`, `size > 0` | `nominal` / hierarchical | `{"members": {"count": <size>}}` |
+
+> **REQ (dimension-collection, §"Extent shape for non-ordered dims"):**
+> Providers whose generator has no orderable extent (purely categorical
+> or hierarchical with `native_min == native_max == null`) **MUST**
+> render `extent` as `{"members": {"count": <size>}}` where `<size>`
+> equals the total number of members across all levels and **MUST**
+> equal the items endpoint's `numberMatched` returned for a full,
+> unfiltered crawl. The `members.count` field gives clients a single
+> canonical "how big is this dimension" value to read before deciding
+> whether to paginate, mirroring the role of `temporal.interval` and
+> `values.{min,max}` for ordered dims.
+
+Servers **MUST NOT** omit `extent` for non-ordered dims when the
+provider exposes a finite size: omitting it forces clients to
+special-case "no extent → fall back to paginating `/items` to learn
+size", which defeats the round-trip invariant above.
+
 ## Round-trip on write paths (normative)
 
 The conformance classes in this specification describe **read** paths

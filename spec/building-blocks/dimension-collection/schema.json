@@ -25,7 +25,7 @@
     },
     "extent": {
       "type": "object",
-      "description": "Temporal or value extent of the dimension.",
+      "description": "Extent of the dimension. Exactly one of `temporal`, `values`, or `members` is present, dispatched on the provider's ExtentResult: temporal interval for time-ordered dims, numeric min/max for ordinal dims, and a categorical `members.count` for hierarchical or otherwise non-ordered dims that have a finite size but no orderable bounds.",
       "properties": {
         "temporal": {
           "type": "object",
@@ -46,8 +46,34 @@
               }
             }
           }
+        },
+        "values": {
+          "type": "object",
+          "description": "Numeric min/max for ordinal dimensions.",
+          "properties": {
+            "min": {"type": ["number", "string"]},
+            "max": {"type": ["number", "string"]}
+          },
+          "required": ["min", "max"]
+        },
+        "members": {
+          "type": "object",
+          "description": "Categorical size for non-ordered dimensions (hierarchical, nominal). `count` MUST equal the items endpoint's numberMatched across all members (root + descendants for hierarchical providers).",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total number of dimension members across the full dimension (all levels for hierarchical dims)."
+            }
+          },
+          "required": ["count"]
         }
-      }
+      },
+      "oneOf": [
+        {"required": ["temporal"]},
+        {"required": ["values"]},
+        {"required": ["members"]}
+      ]
     },
     "provider": {
       "$ref": "../../schema/provider.json",
