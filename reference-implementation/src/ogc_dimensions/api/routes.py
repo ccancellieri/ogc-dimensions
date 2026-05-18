@@ -201,7 +201,9 @@ def _member_to_feature(
         if key in extra:
             props[key] = extra[key]
 
-    # Build links
+    # Build links — every emitted rel MUST correspond to a declared provider
+    # capability (dimension-member BB §"Link relations"). Non-hierarchical
+    # providers MUST NOT emit ancestors/children rels.
     feature_links: list[dict[str, str]] = []
     if gen is not None and dim_base_url is not None and code:
         feature_links.append({
@@ -214,17 +216,18 @@ def _member_to_feature(
             "rel": "collection",
             "type": "application/json",
         })
-        if gen.has_children(code):
+        if gen.hierarchical and gen.has_children(code):
             feature_links.append({
                 "rel": "children",
                 "href": f"{dim_base_url}/children?parent={code}",
                 "type": "application/geo+json",
             })
-        feature_links.append({
-            "rel": "ancestors",
-            "href": f"{dim_base_url}/ancestors?member={code}",
-            "type": "application/json",
-        })
+        if gen.hierarchical:
+            feature_links.append({
+                "rel": "ancestors",
+                "href": f"{dim_base_url}/ancestors?member={code}",
+                "type": "application/json",
+            })
 
     feature: dict[str, Any] = {
         "type": "Feature",

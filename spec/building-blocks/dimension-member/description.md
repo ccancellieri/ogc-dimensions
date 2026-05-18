@@ -35,3 +35,25 @@ Depends on:
 | `properties.dimension:has_children` | `true` if node has children |
 | `links[rel=parent]` | Link to parent member |
 | `links[rel=children]` | Link to children listing |
+
+## Link relations (normative)
+
+The `rel` values appearing in `links[]` of a dimension or member response
+**MUST** be a subset of the rel values derived from the dimension's
+`provider` capabilities:
+
+| Provider capability | Permitted `links[].rel` values |
+|---------------------|-------------------------------|
+| (always) | `self`, `collection`, `items`, `queryables` |
+| `invertible: true` | `inverse` |
+| `search: [...]` non-empty | `search` |
+| `hierarchical: true` | `parent`, `children`, `ancestors` |
+
+Servers **MUST NOT** emit a `rel` value whose corresponding capability
+is not declared by the provider. A conformance test SHALL assert this
+on every registered provider × `rel` combination.
+
+> **Why:** without this rule a server can advertise a hierarchical
+> traversal link on a non-hierarchical dimension, sending clients to
+> an endpoint that returns 501. The `links[]` set must remain a
+> truthful projection of the provider's declared capability surface.
