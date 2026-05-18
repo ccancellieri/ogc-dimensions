@@ -14,3 +14,8 @@ venv/
 *.swp
 *.swo
 .DS_Store
+
+# ruvector / mcp-skill-hub local DB
+ruvector.db
+*.ruvector.db
+

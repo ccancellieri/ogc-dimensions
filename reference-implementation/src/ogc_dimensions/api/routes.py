@@ -410,6 +410,19 @@ async def conformance():
     return {"conformsTo": OGC_DIMENSIONS_CONFORMANCE}
 
 
+@router.get("/{dimension_id}")
+async def get_dimension(request: Request, dimension_id: str):
+    """Return a single dimension collection.
+
+    Resolves the documented client flow ``cube:dimensions[*].provider.href``
+    end-to-end: clients follow the href to this endpoint and then follow
+    ``links[rel="items"]`` to paginate members.
+    """
+    cfg = _get_dimension(dimension_id)
+    base = _parent_url(request)
+    return _dimension_to_collection(dimension_id, cfg, base)
+
+
 @router.get("/{dimension_id}/queryables")
 async def queryables(
     request: Request,

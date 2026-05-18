@@ -38,3 +38,14 @@ Servers that implement this building block:
 1. Serve the collection at `/collections/{dimensionId}`
 2. Include `cube:dimensions` in the collection metadata
 3. Serve members as Records at `/collections/{dimensionId}/items`
+
+## Singular endpoint (normative)
+
+Servers **MUST** serve the dimension collection at the singular path
+`/{collections-root}/{dimensionId}` (e.g. `/dimensions/{dimensionId}`),
+returning the same Collection-shaped JSON that appears as one entry of
+the root listing's `collections[]` array. This guarantees that the
+client flow documented for `cube:dimensions[*].provider.href` — follow
+the href to obtain the dimension record, then follow `links[rel="items"]`
+to paginate members — resolves end-to-end without requiring a client to
+parse the root listing to look up a member by `id`.
