@@ -1,9 +1,10 @@
 {
   "$schema": "https://opengeospatial.github.io/bblocks-postprocess/ogc/bblocks/metadata-schema.yaml",
   "name": "OGC API - Dimensions Building Blocks",
-  "abstract": "OGC API - Dimensions is a profile of OGC API - Records that defines how datacube dimension metadata and members are represented as Record collections and Records, respectively. It is packaged as five OGC Building Blocks that can be adopted independently.",
-  "status": "under-development",
-  "dateOfLastChange": "2026-04-14",
+  "abstract": "OGC API - Dimensions is a profile of OGC API - Records that defines how datacube dimension metadata and members are represented as Record collections and Records, respectively. It is packaged as six OGC Building Blocks that can be adopted independently.",
+  "status": "stable",
+  "version": "1.0.0",
+  "dateOfLastChange": "2026-05-18",
   "sources": [
     {
       "title": "OGC API - Records - Part 1: Core (OGC 20-004)",
@@ -36,7 +37,7 @@
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-collection",
       "name": "Dimension Collection",
-      "status": "under-development",
+      "status": "stable",
       "dateOfLastChange": "2026-04-14",
       "sources": [],
       "maturity": "candidate",
@@ -52,7 +53,7 @@
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-member",
       "name": "Dimension Member",
-      "status": "under-development",
+      "status": "stable",
       "dateOfLastChange": "2026-04-14",
       "sources": [],
       "maturity": "candidate",
@@ -68,7 +69,7 @@
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-pagination",
       "name": "Dimension Pagination",
-      "status": "under-development",
+      "status": "stable",
       "dateOfLastChange": "2026-04-14",
       "sources": [],
       "maturity": "candidate",
@@ -84,7 +85,7 @@
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-inverse",
       "name": "Dimension Inverse",
-      "status": "under-development",
+      "status": "stable",
       "dateOfLastChange": "2026-04-14",
       "sources": [],
       "maturity": "candidate",
@@ -100,7 +101,7 @@
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-hierarchical",
       "name": "Dimension Hierarchical",
-      "status": "under-development",
+      "status": "stable",
       "dateOfLastChange": "2026-04-14",
       "sources": [],
       "maturity": "candidate",
@@ -116,7 +117,7 @@
     {
       "itemIdentifier": "ogc.api.dimensions.dimension-similarity",
       "name": "Dimension Similarity",
-      "status": "under-development",
+      "status": "stable",
       "dateOfLastChange": "2026-05-18",
       "sources": [],
       "maturity": "candidate",

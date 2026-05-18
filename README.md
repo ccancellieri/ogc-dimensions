@@ -30,12 +30,13 @@ ogc-dimensions/
 │   │   ├── provider.json         # Full provider object schema
 │   │   └── hierarchy.json        # Hierarchy descriptor schema
 │   ├── building-blocks/          # OGC Building Blocks (OGC API - Dimensions profile)
-│   │   ├── bblocks.json          # Building block registry (5 blocks, status: under-development)
+│   │   ├── bblocks.json          # Building block registry (6 blocks, v1.0.0 stable)
 │   │   ├── dimension-collection/ # BB: Records catalogue exposing provider + cube:dimensions
 │   │   ├── dimension-member/     # BB: Record representing a single dimension member
 │   │   ├── dimension-pagination/ # BB: OGC Common Part 2 pagination (numberMatched + next/prev)
 │   │   ├── dimension-inverse/    # BB: /inverse endpoint (value → member mapping)
-│   │   └── dimension-hierarchical/ # BB: /children + /ancestors endpoints + ?parent= filter
+│   │   ├── dimension-hierarchical/ # BB: /children + /ancestors endpoints + ?parent= filter
+│   │   └── dimension-similarity/ # BB: /search?similar= endpoint + RFC 7807 501 stub
 │   └── examples/                 # Full collection JSON examples
 │       ├── dekadal.json          # Dekadal temporal dimension
 │       ├── pentadal.json         # Pentadal variants (monthly 72/year, annual 73/year)
@@ -233,7 +234,7 @@ All endpoints are mounted under a configurable prefix (default `/dimensions`).
 
 ## Conformance Levels
 
-The specification groups capabilities into five **adoption levels** for narrative clarity. Each level is realised by one or more of the five **Building Blocks** listed in [spec/building-blocks/bblocks.json](spec/building-blocks/bblocks.json); adopters consume BBs, while readers discuss levels.
+The specification groups capabilities into five **adoption levels** for narrative clarity. Each level is realised by one or more of the six **Building Blocks** listed in [spec/building-blocks/bblocks.json](spec/building-blocks/bblocks.json) (registry status: **stable, v1.0.0**); adopters consume BBs, while readers discuss levels. Conformance class URIs include the `/1.0/` segment, so an assertion made today against this registry stays meaningful across future revisions.
 
 | Level | Capabilities | Realised by Building Block(s) | Requirement |
 |---|---|---|---|
