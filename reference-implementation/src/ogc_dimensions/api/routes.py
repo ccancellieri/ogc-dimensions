@@ -377,13 +377,25 @@ def _dimension_to_collection(
         "links": links,
     }
 
-    # Add extent for temporal dimensions
-    if cfg.dimension_type == "temporal" and cfg.extent_min and cfg.extent_max:
-        collection["extent"] = {
-            "temporal": {
-                "interval": [[f"{cfg.extent_min}T00:00:00Z", f"{cfg.extent_max}T00:00:00Z"]]
+    # Extent is DERIVED from the provider's extent() — never statically
+    # configured at the collection level. dimension-collection BB §"Extent
+    # derivation" requires extent to round-trip with the generator's
+    # native min/max so it cannot drift from numberMatched.
+    if cfg.extent_min and cfg.extent_max:
+        ext = gen.extent(cfg.extent_min, cfg.extent_max)
+        if cfg.dimension_type == "temporal":
+            # Render native min/max as RFC 3339 instants if not already so.
+            nmin = str(ext.native_min)
+            nmax = str(ext.native_max)
+            if "T" not in nmin:
+                nmin = f"{nmin}T00:00:00Z"
+            if "T" not in nmax:
+                nmax = f"{nmax}T00:00:00Z"
+            collection["extent"] = {"temporal": {"interval": [[nmin, nmax]]}}
+        else:
+            collection["extent"] = {
+                "values": {"min": ext.native_min, "max": ext.native_max}
             }
-        }
 
     return collection
 

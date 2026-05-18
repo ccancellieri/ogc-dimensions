@@ -39,6 +39,23 @@ Servers that implement this building block:
 2. Include `cube:dimensions` in the collection metadata
 3. Serve members as Records at `/collections/{dimensionId}/items`
 
+## Extent derivation (normative)
+
+The `extent` field of a dimension collection **MUST** be derived from
+the backing provider's generator: specifically, from the
+`ExtentResult.native_min` / `native_max` returned by
+`provider.extent(extent_min, extent_max)` and the corresponding
+`size` value.
+
+Implementations **MUST NOT** allow `extent` to be configured
+independently of the generator at the collection level. Without this
+constraint, `extent` and the items endpoint's `numberMatched` can
+drift independently (live regression observed against `v1.0.0-rc.1`).
+
+Servers **SHOULD** perform a startup-time assertion of the form
+`extent.size == generator.number_matched` and **SHOULD** fail loudly
+on inconsistency.
+
 ## Singular endpoint (normative)
 
 Servers **MUST** serve the dimension collection at the singular path

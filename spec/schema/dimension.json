@@ -33,7 +33,7 @@
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
-      "description": "The extent (minimum and maximum values) of the dimension. For hierarchical dimensions, this represents the bounds of the entire dimension across all levels."
+      "description": "The extent (minimum and maximum values) of the dimension. For hierarchical dimensions, this represents the bounds of the entire dimension across all levels. NORMATIVE: when the dimension is backed by a `provider`, the `extent` MUST be derived from the provider's generator min/max (see ExtentResult.native_min/native_max). Implementations MUST NOT permit `extent` to be configured independently of the generator. Servers SHOULD perform a startup-time assertion that the reported extent's size equals the generator's numberMatched and fail loudly on drift."
     },
     "values": {
       "type": "array",
