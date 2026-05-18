@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/building-blocks/dimension-similarity/schema.json",
+  "title": "Dimension Similarity Query",
+  "description": "Query parameters for the dimension-similarity conformance class. The 'similar' parameter carries the reference value against which members are ranked by vector-embedding proximity. The 'limit' parameter (k of k-NN) caps the result set.",
+  "type": "object",
+  "required": ["similar"],
+  "properties": {
+    "similar": {
+      "type": "string",
+      "description": "Reference value (member code, free-text label, or embedding identifier — provider-defined) against which dimension members are ranked by embedding-space proximity."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10,
+      "description": "Maximum number of results (k of k-NN)."
+    }
+  }
+}

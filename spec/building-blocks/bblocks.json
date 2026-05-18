@@ -112,6 +112,22 @@
       ],
       "tags": ["dimensions", "hierarchy", "navigation"],
       "abstract": "Defines /children and /ancestors endpoints and the ?parent= filter for hierarchical dimension navigation. /children mirrors the STAC API Children Extension (https://github.com/stac-api-extensions/children) applied to dimension members. ?parent= filter follows OGC API Common #298 pattern. /ancestors is a novel contribution for upward traversal. Supports both leveled (fixed-depth) and recursive (arbitrary-depth) tree structures."
+    },
+    {
+      "itemIdentifier": "ogc.api.dimensions.dimension-similarity",
+      "name": "Dimension Similarity",
+      "status": "under-development",
+      "dateOfLastChange": "2026-05-18",
+      "sources": [],
+      "maturity": "candidate",
+      "scope": "ogc-dimensions",
+      "group": "OGC API - Dimensions",
+      "shaclRules": [],
+      "dependsOn": [
+        "ogc.api.dimensions.dimension-member"
+      ],
+      "tags": ["dimensions", "search", "similarity", "vector", "embedding"],
+      "abstract": "Defines the /{id}/search?similar=... endpoint for vector-embedding k-NN search over dimension members. Pins the URI, query-parameter shape, and error envelope into v1.0. Conformant servers without a backing vector index MUST return the prescribed RFC 7807 problem-detail with HTTP 501 (type: …/errors/similarity-not-implemented). The conformance class URI is advertised at /conformance regardless, so clients can negotiate the capability surface against the spec."
     }
   ]
 }

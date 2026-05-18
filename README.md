@@ -241,9 +241,9 @@ The specification groups capabilities into five **adoption levels** for narrativ
 | **Invertible** | + `/inverse` (GET + POST batch) | `dimension-inverse` | Invertible providers only |
 | **Searchable** | + `/search` (exact, range, like) | `dimension-collection` (query capability) | SHOULD support |
 | **Hierarchical** | + `/children` + `/ancestors` + `?parent=` filter | `dimension-hierarchical` | Required when the dimension declares a `hierarchy` property |
-| *Similarity (informative)* | + `/search` (vector embedding, k-NN) | *— no Building Block ships in 1.0; future work* | MAY support |
+| **Similarity** | + `/search?similar=...` (vector embedding, k-NN) | `dimension-similarity` | Optional; conformant servers without a backing index MUST return the prescribed 501 problem-detail [^similarity-stub] |
 
-The *Similarity* row is retained as an informative architectural hook for embedding-based dimension navigation; it has no normative schema, no conformance class URI, and no reference implementation in this release. Implementations that claim "Similarity" conformance are advertising an extension, not a standard capability.
+[^similarity-stub]: The reference implementation ships an honest stub: `GET /{id}/search?similar=...` returns `501 Not Implemented` with an `application/problem+json` body of `type: https://www.opengis.net/spec/ogc-dimensions/1.0/errors/similarity-not-implemented`. The conformance class URI is advertised at `/conformance` so clients can discover the capability surface even when the backing index is absent.
 
 Conformance class URIs follow the pattern `http://www.opengis.net/spec/ogc-dimensions/1.0/conf/{building-block-id}` and are declared in each Building Block's `description.md`.
 
