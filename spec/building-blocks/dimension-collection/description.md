@@ -56,6 +56,33 @@ Servers **SHOULD** perform a startup-time assertion of the form
 `extent.size == generator.number_matched` and **SHOULD** fail loudly
 on inconsistency.
 
+## Round-trip on write paths (normative)
+
+The conformance classes in this specification describe **read** paths
+end-to-end: a client reads a STAC collection, follows
+`cube:dimensions[*].provider.href`, paginates members. This section
+adds the corresponding **write**-path round-trip clause.
+
+> **REQ (dimension-collection, §"Round-trip"):** When a STAC
+> collection's `cube:dimensions[*].provider.href` resolves under the
+> server's own registry (i.e. the URL prefix matches
+> `${baseUrl}/dimensions/`), the server **SHOULD** reject collection
+> writes that reference unknown providers, returning **`422
+> Unprocessable Entity`** with an `application/problem+json` body that
+> names the unresolved href in `detail` and, where possible, the
+> closest registered provider in a `nearest` field. Servers whose
+> registry is external **SHOULD** treat the href opaquely (no
+> resolution attempt, no rejection).
+
+Without this clause, a workspace can write a STAC collection asserting
+`cube:dimensions.time.provider.href = "<server>/dimensions/pentadal-monthly"`
+when no such provider is registered, and the broken reference is only
+detected at read time — far from the typo or the deleted dimension.
+
+This clause depends on the singular `GET /dimensions/{id}` endpoint
+defined below: a server cannot validate a `provider.href` end-to-end
+without it.
+
 ## Singular endpoint (normative)
 
 Servers **MUST** serve the dimension collection at the singular path

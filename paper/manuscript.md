@@ -336,6 +336,25 @@ Inverse computation is O(1) per value for temporal providers (direct arithmetic 
 
 The current reference implementation materializes the full member list before slicing to the requested page. This is adequate for the intended demonstration scale (hundreds to low thousands of members) but would benefit from lazy iteration for production deployments spanning millions of members. Database-backed provider implementations — such as the GeoID DimensionsExtension, which delegates to PostgreSQL or Elasticsearch — avoid this limitation entirely by pushing pagination to the query layer.
 
+### 4.4 Write paths and the round-trip clause
+
+The conformance classes of Section 3.5 describe **read** paths
+end-to-end: a client reads a STAC collection, follows
+`cube:dimensions[*].provider.href`, and paginates members. To close
+the loop, this revision adds a normative round-trip clause to the
+`dimension-collection` Building Block that constrains **write** paths
+as well. When a STAC collection's `cube:dimensions[*].provider.href`
+resolves under the server's own registry (URL prefix matches
+`${baseUrl}/dimensions/`), the server SHOULD reject the write if the
+href does not resolve, returning `422 Unprocessable Entity` with an
+`application/problem+json` body that names the unresolved href. Servers
+whose registry is external SHOULD treat the href opaquely. The clause
+depends on the singular `GET /dimensions/{id}` endpoint also added in
+this revision — without that endpoint, a server cannot validate a
+provider reference end-to-end. Together, the two clauses prevent a
+typo or a deleted dimension from being silently recorded in a
+collection and only surfacing at read time.
+
 ## 5. Use Cases
 
 The six use-case dimensions deployed on the live endpoint collectively demonstrate every conformance level defined in Section 3.5. Each subsection below describes the operational problem, the specific capability gap in current standards, and how the provider specification resolves it. All examples reference the live endpoints at https://data.review.fao.org/geospatial/v2/api/tools/docs.
