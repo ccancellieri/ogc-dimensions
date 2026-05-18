@@ -36,6 +36,22 @@ Depends on:
 | `links[rel=parent]` | Link to parent member |
 | `links[rel=children]` | Link to children listing |
 
+## Identifier (normative)
+
+The `Feature.id` of a dimension member **MUST** equal the natural key
+of that member — the dimension's `code` value (e.g. `2024-D01`,
+`bin_0`, `ITA`). Servers **MUST NOT** mint surrogate identifiers
+(UUIDs, auto-increment integers) for dimension members.
+
+Regenerating the algorithm or reloading the registry from the same
+`config` MUST produce the same `id` for the same member across
+deployments, restarts, and releases. This is the constraint that lets
+implementations substitute a virtual (generator-as-reader) backing for
+a materialised one without breaking any downstream system that records
+the member identifier — see the informative annex
+[`docs/annex-virtual-dimensions.md`](../../../docs/annex-virtual-dimensions.md)
+for the operational guidance behind this clause.
+
 ## Link relations (normative)
 
 The `rel` values appearing in `links[]` of a dimension or member response

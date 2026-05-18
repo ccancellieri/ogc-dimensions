@@ -274,6 +274,14 @@ The Hierarchical conformance level is orthogonal to all other conformance levels
 
 ## 4. Implementation and Validation
 
+For operational guidance on whether to serve a generated dimension
+*virtually* (regenerating members from the algorithm on every request)
+or *materialised* (upserting members into Records rows), see the
+informative annex
+[`docs/annex-virtual-dimensions.md`](../docs/annex-virtual-dimensions.md).
+The annex also carries the normative `Feature.id` natural-key clause
+that makes virtual-vs-materialised substitution safe.
+
 ### 4.1 Reference Implementation
 
 We provide an open-source reference implementation as a Python package (`ogc-dimensions`) with a FastAPI REST API. All paginated endpoints return OGC API - Records compliant responses: FeatureCollection envelopes containing GeoJSON Feature members with `geometry: null` and `dimension:*` namespaced properties. A `/conformance` endpoint declares conformance to both OGC API - Records and OGC Dimensions conformance classes. The source code, JSON Schema specification, OGC Building Blocks, and worked examples are available at https://github.com/ccancellieri/ogc-dimensions under the Apache-2.0 license.
