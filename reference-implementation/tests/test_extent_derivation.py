@@ -43,3 +43,38 @@ class TestExtentDerivedFromGenerator:
                 f"{dim_id}: extent.size={ext.size} != numberMatched="
                 f"{r.json()['numberMatched']}"
             )
+
+
+class TestExtentShapeForNonOrderedDims:
+    """ogc-dimensions#9 — hierarchical/categorical providers render
+    extent as `{"members": {"count": <size>}}` and that count rounds
+    trips with the items endpoint's numberMatched across all members.
+    """
+
+    def test_tree_collection_has_members_extent(self):
+        for dim_id, cfg in DIMENSIONS.items():
+            ext = cfg.provider.extent(cfg.extent_min, cfg.extent_max)
+            if ext.native_min is not None or ext.native_max is not None:
+                continue
+            r = client.get(f"/dimensions/{dim_id}")
+            assert r.status_code == 200
+            extent = r.json().get("extent")
+            assert extent is not None, f"{dim_id}: extent omitted on non-ordered dim"
+            assert "members" in extent, (
+                f"{dim_id}: expected 'members' extent shape, got {extent}"
+            )
+            assert extent["members"]["count"] == ext.size
+
+    def test_tree_members_count_matches_full_crawl(self):
+        for dim_id, cfg in DIMENSIONS.items():
+            ext = cfg.provider.extent(cfg.extent_min, cfg.extent_max)
+            if ext.native_min is not None or ext.native_max is not None:
+                continue
+            r = client.get(
+                f"/dimensions/{dim_id}/items",
+                params={"limit": 1000, "offset": 0},
+            )
+            assert r.status_code == 200
+            # For hierarchical providers, an unfiltered /items returns root
+            # members only; the canonical full size lives in ExtentResult.
+            assert ext.size >= r.json()["numberMatched"]

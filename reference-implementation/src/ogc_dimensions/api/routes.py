@@ -382,8 +382,8 @@ def _dimension_to_collection(
     # configured at the collection level. dimension-collection BB §"Extent
     # derivation" requires extent to round-trip with the generator's
     # native min/max so it cannot drift from numberMatched.
-    if cfg.extent_min and cfg.extent_max:
-        ext = gen.extent(cfg.extent_min, cfg.extent_max)
+    ext = gen.extent(cfg.extent_min, cfg.extent_max)
+    if ext.native_min is not None and ext.native_max is not None:
         if cfg.dimension_type == "temporal":
             # Render native min/max as RFC 3339 instants if not already so.
             nmin = str(ext.native_min)
@@ -397,6 +397,12 @@ def _dimension_to_collection(
             collection["extent"] = {
                 "values": {"min": ext.native_min, "max": ext.native_max}
             }
+    elif ext.size:
+        # Non-ordered (hierarchical/categorical) dimensions: no numeric or
+        # temporal interval applies. Surface the canonical size so clients
+        # have a single field to read for "how big is this dimension" before
+        # paginating. Resolves ogc-dimensions#9.
+        collection["extent"] = {"members": {"count": ext.size}}
 
     return collection
 
