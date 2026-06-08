@@ -32,10 +32,7 @@
         "step": null,
         "unit": "pentad",
         "size": 1800,
-        "provider": {
-          "type": "daily-period",
-          "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-monthly"
-        }
+        "definition": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-monthly"
       }
     },
     "cube:variables": {
@@ -80,10 +77,7 @@
         "step": null,
         "unit": "pentad",
         "size": 3358,
-        "provider": {
-          "type": "daily-period",
-          "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-annual"
-        }
+        "definition": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/temporal-pentadal-annual"
       }
     },
     "cube:variables": {

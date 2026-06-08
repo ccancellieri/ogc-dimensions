@@ -60,7 +60,8 @@
       "reference_system": 4326
     },
     "admin": {
-      "type": "nominal",
+      "type": "other",
+      "variableType": "categoricalNominal",
       "description": "Administrative boundary dimension. Three-level hierarchy: Country (L0), ADM1 sub-national unit (L1), ADM2 district (L2). Leveled strategy: hierarchy is defined by level rules, not by parent fields stored on members. Clients navigate via /children endpoint.",
       "hierarchy": {
         "strategy": "leveled",
@@ -104,10 +105,7 @@
           }
         ]
       },
-      "provider": {
-        "type": "leveled-tree",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin"
-      }
+      "definition": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/world-admin"
     }
   }
 }

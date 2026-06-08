@@ -27,14 +27,12 @@
     },
     "elevation": {
       "type": "other",
+      "variableType": "numericalOrdinal",
       "description": "Elevation bands (metres above sea level). 100 m step from 0 to 5000 m produces 51 bands.",
       "extent": [0, 5000],
       "unit": "m",
       "size": 51,
-      "provider": {
-        "type": "integer-range",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands"
-      }
+      "definition": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/elevation-bands"
     }
   },
   "cube:variables": {

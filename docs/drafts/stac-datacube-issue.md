@@ -6,6 +6,16 @@
 
 ---
 
+> **STATUS — SUPERSEDED (kept for provenance).** This is the original *monolithic* #36 proposal. Following @fmigneault's review ([comment 4577791012](https://github.com/stac-extensions/datacube/issues/36#issuecomment-4577791012)) it has been **decomposed**; the umbrella tracker is [#18](https://github.com/ccancellieri/ogc-dimensions/issues/18) and the reshaped position was posted as the [reply on #36](https://github.com/stac-extensions/datacube/issues/36#issuecomment-4648632171).
+>
+> The **entire datacube ask is now two optional, additive fields** on `cube:dimensions`:
+> 1. **`size`** (integer) — member cardinality, resolves #31.
+> 2. **`definition`** (URI) — OGC API – Common Part 2 UAD link-out to the OGC API – Dimensions collection endpoint.
+>
+> A separate **`variableType`** property (UAD enum: `continuous | numericalOrdinal | numericalNominal | categoricalOrdinal | categoricalNominal`) carries the member measurement scale. The previously proposed **`provider` object and `nominal`/`ordinal` `type` values are withdrawn.** The normative schema is [`spec/schema/dimension.json`](../../spec/schema/dimension.json); the sections below are retained as the original narrative and use the old vocabulary except where the embedded JSON has been updated to the reshaped shape. No external PR is being opened.
+
+---
+
 ## Title
 
 [PROPOSAL] OGC API – Dimensions: scalable, multilingual dimension members as an OGC API – Records profile
@@ -126,10 +136,7 @@ A slim reference identifying the dimension's backing provider and linking to its
     "step": null,
     "unit": "dekad",
     "size": 900,
-    "provider": {
-      "type": "daily-period",
-      "href": "https://example.org/dimensions/temporal-dekadal"
-    }
+    "definition": "https://example.org/dimensions/temporal-dekadal"
   }
 }
 ```
@@ -193,7 +200,8 @@ Each hierarchy level MAY declare a `labels` map for multilingual level names alo
 ```json
 {
   "admin": {
-    "type": "nominal",
+    "type": "other",
+    "variableType": "categoricalNominal",
     "hierarchy": {
       "strategy": "leveled",
       "levels": [
@@ -222,7 +230,7 @@ Each hierarchy level MAY declare a `labels` map for multilingual level names alo
         }
       ]
     },
-    "provider": {"type": "leveled-tree", "href": "https://example.org/dimensions/world-admin"}
+    "definition": "https://example.org/dimensions/world-admin"
   }
 }
 ```
@@ -331,11 +339,11 @@ All examples validate against the extended schema and are backed by a live refer
 
 | Example | Type | Demonstrates |
 |---|---|---|
-| [dekadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/dekadal.json) | `temporal` | `size`, slim `provider`, dekadal calendar (36/year), invertible |
+| [dekadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/dekadal.json) | `temporal` | `size`, `definition` link-out, dekadal calendar (36/year), invertible |
 | [pentadal.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/pentadal.json) | `temporal` | Two competing pentadal systems (72/yr monthly vs 73/yr annual) |
-| [integer-range.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/integer-range.json) | `other` | Non-temporal integer-range dimension (100 m elevation bands, 0–5000 m) |
-| [admin-hierarchy.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/admin-hierarchy.json) | **`nominal`** | Leveled hierarchy (Country → ADM1 → ADM2), multilingual `labels`, `language_support`, sort |
-| [indicator-tree.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/indicator-tree.json) | **`nominal`** | Recursive hierarchy (FAOSTAT indicator tree, depth 4) |
+| [integer-range.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/integer-range.json) | `other` / `numericalOrdinal` | Non-temporal integer-range dimension (100 m elevation bands, 0–5000 m) |
+| [admin-hierarchy.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/admin-hierarchy.json) | `other` / **`categoricalNominal`** | Leveled hierarchy (Country → ADM1 → ADM2), multilingual `labels`, `language_support`, sort |
+| [indicator-tree.json](https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/indicator-tree.json) | `other` / **`categoricalNominal`** | Recursive hierarchy (FAOSTAT indicator tree, depth 4) |
 
 ---
 
