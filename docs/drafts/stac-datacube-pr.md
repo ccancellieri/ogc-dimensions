@@ -6,6 +6,10 @@
 
 ---
 
+> **STATUS — WITHDRAWN / NOT BEING OPENED.** This drafted the original *seven-field* PR. After @fmigneault's review the proposal was decomposed (umbrella [#18](https://github.com/ccancellieri/ogc-dimensions/issues/18)) and **no external PR is being opened**. Should a focused PR ever be revived, its entire scope is **two optional, additive fields** on the dimension object — `size` (integer, resolves #31) and `definition` (URI, OGC API – Common Part 2 UAD link-out) — plus an optional `variableType` enum (UAD measurement scale). The `href`, `provider`, `hierarchy`, and `nominal`/`ordinal`-type additions described below are **withdrawn**. Normative schema: [`spec/schema/dimension.json`](../../spec/schema/dimension.json). The section below is retained for provenance only.
+
+---
+
 ## Title
 
 feat: add `size`, `href`, `provider`, `hierarchy`, `nominal`/`ordinal` types, multilingual labels, and sort order for scalable dimension members

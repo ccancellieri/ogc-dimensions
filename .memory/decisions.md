@@ -89,3 +89,8 @@ Decision: Cleaned up. Five conformance levels: Basic, Invertible, Searchable, Hi
 Context: Need to showcase on a live FAO system without coupling to STAC.
 Decision: Thin `DimensionsExtension` (ExtensionProtocol) in geoid wraps the ogc-dimensions pip package. Deployed on `geospatial-tools` Cloud Run service (SCOPE: core,template,dimensions). No STAC interaction.
 Rationale: Prototype isolation; ogc-dimensions stays independent; Dynastore just mounts the router.
+
+## 2026-04-19 GeoID platform OGC surface expanded — dimensions extension coexists
+Context: GeoID landed a 15-PR round (Passes 1–5) adding Records geojson/Web oas31/Maps jpeg+geotiff/Styles full/Coverages streaming/Processes Part 1 fixes/BigQuery driver/`/join` OGC surface/`/volumes` route shell/SidecarBoundsSource/CQL2 primary filter/Secret-wrapped BQ credentials. See un-fao/GeoID PRs #11-#25. The DimensionsExtension is not modified — it sits as one more OGC extension alongside these.
+Decision: Update paper §4.1 + CHANGELOG (Unreleased) to note that the integrating platform now publishes a broader OGC API surface demonstrating cross-extension composition under the platform's `ExtensionProtocol` / `OGCServiceMixin` seam. Spec and reference-implementation code untouched.
+Rationale: Strengthens the building-block narrative. Dimensions are not a standalone API — they compose with Records, Coverages, Styles, Maps, Processes, Joins, 3D GeoVolumes under one `/conformance` aggregate. This is a validation point for the thesis and a non-normative addition (no standard surface changes).

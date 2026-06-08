@@ -66,7 +66,8 @@
       "unit": "year"
     },
     "indicator": {
-      "type": "nominal",
+      "type": "other",
+      "variableType": "categoricalNominal",
       "description": "Statistical indicator dimension. Recursive hierarchy: each indicator carries a parent_code field referencing its parent indicator or group. Root members (domains) have parent_code = null. Clients retrieve all root indicators, then navigate children via /children. This mirrors SKOS concept scheme navigation (skos:narrower) as a RESTful paginated API.",
       "hierarchy": {
         "strategy": "recursive",
@@ -74,10 +75,7 @@
         "root_filter": "parent_code IS NULL",
         "depth": 4
       },
-      "provider": {
-        "type": "https://www.fao.org/faostat/generators/indicator/openapi.json",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators"
-      }
+      "definition": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/faostat-indicators"
     }
   }
 }

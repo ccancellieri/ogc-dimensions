@@ -2,23 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ccancellieri.github.io/ogc-dimensions/spec/schema/dimension.json",
   "title": "Extended Datacube Dimension",
-  "description": "Extends the STAC Datacube Extension dimension object with size and provider properties for scalable dimension member dissemination. Full provider details (config, parameters, hierarchy, language support, capabilities) are exposed at the OGC API - Dimensions collection endpoint referenced by provider.href; the paginated items endpoint is discovered via the OGC API - Records rel=\"items\" link on that collection response.",
+  "description": "Extends the STAC Datacube Extension dimension object with two optional, additive properties for scalable dimension member dissemination: 'size' (total member cardinality) and 'definition' (a UAD-aligned URI link-out). Full dimension capabilities (provider config, parameters, hierarchy, language support, invertibility) are exposed at the OGC API - Dimensions collection endpoint referenced by 'definition'; the paginated items endpoint is discovered via the OGC API - Records rel=\"items\" link on that collection response. A separate 'variableType' property carries the member measurement scale (UAD vocabulary).",
   "type": "object",
   "required": ["type"],
   "properties": {
     "type": {
       "type": "string",
-      "description": "Dimension type. The values 'spatial', 'temporal', and 'bands' are defined by the STAC Datacube Extension. This specification additionally proposes 'nominal' (unordered coded dimension whose members are named categories, such as administrative units or statistical indicator codes) and 'ordinal' (ordered coded dimension whose members have an inherent rank, such as quality flags or severity levels). Existing implementations that do not recognise 'nominal' or 'ordinal' treat them as unknown and continue to process the dimension using other standard properties. The value 'other' remains valid for dimensions that do not fit any of the named types.",
-      "oneOf": [
-        {
-          "enum": ["spatial", "temporal", "bands", "other"],
-          "description": "Standard STAC Datacube Extension types."
-        },
-        {
-          "enum": ["nominal", "ordinal"],
-          "description": "Proposed additions: coded dimensions (nominal = unordered categories; ordinal = ranked categories)."
-        }
-      ]
+      "enum": ["spatial", "temporal", "bands", "other"],
+      "description": "Dimension type as defined by the STAC Datacube Extension. Coded (categorical or ranked) dimensions use 'other' and carry their measurement scale in the separate 'variableType' property below. NOTE: earlier drafts of this proposal coined 'nominal'/'ordinal' as additional 'type' values; that overlapped with existing concepts and has been withdrawn in favour of reusing the OGC API - Common Part 2 'variableType' vocabulary."
+    },
+    "variableType": {
+      "type": "string",
+      "enum": ["continuous", "numericalOrdinal", "numericalNominal", "categoricalOrdinal", "categoricalNominal"],
+      "description": "Measurement scale of the dimension members, reusing the OGC API - Common Part 2 'Uniform Additional Dimensions' (UAD) 'variableType' enum (schema additionalDimensionExtent.yaml). Replaces the withdrawn 'nominal'/'ordinal' 'type' values. The mapping from Stevens (1946) scales is one-to-many: a 'nominal' axis is 'numericalNominal' or 'categoricalNominal' depending on whether its member codes are numeric or categorical; likewise an ordinal axis is 'numericalOrdinal' or 'categoricalOrdinal'. NOTE: this is unrelated to stac-extensions/product, whose 'product:acquisition_type' = 'nominal' denotes a routine (non-calibration) acquisition pass, not a measurement scale; product's fields are item-level distribution metadata and do not type a dimension axis."
     },
     "description": {
       "type": "string",
@@ -64,26 +60,10 @@
       "minimum": 0,
       "description": "Total number of discrete members in this dimension. For flat dimensions, this is the total member count. For hierarchical dimensions with leveled strategy, omit this field and use size on individual levels instead; for recursive strategy, retrieve total count from the provider. RECOMMENDED for flat and recursive dimensions."
     },
-    "provider": {
-      "type": "object",
-      "description": "Lightweight reference to the dimension's provider — the system that serves or generates the members. Contains just enough to categorize the dimension and link to the full definition at the OGC API - Dimensions endpoint. Full details (config, parameters, output schema, invertible flag, hierarchy, language support, conformance) are available by following provider.href.",
-      "required": ["type"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "Provider type identifier. Well-known types: 'daily-period', 'integer-range', 'static-tree', 'leveled-tree'. Custom providers use a full URI."
-        },
-        "href": {
-          "type": "string",
-          "format": "uri-reference",
-          "description": "Link to the dimension collection at the OGC API - Dimensions endpoint. Following this link returns the full provider definition, hierarchy structure, language support, conformsTo URIs, and capability links (/inverse, /children, /ancestors)."
-        }
-      }
-    }
-  },
-  "dependentSchemas": {
-    "provider": {
-      "description": "When provider is present, the dimension has a backing service. Follow provider.href to discover capabilities (invertible, hierarchical, language support). When the provider type is 'static-tree' or 'leveled-tree', size SHOULD be specified per hierarchy level rather than at the dimension root."
+    "definition": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI identifying the semantic concept of this dimension, reusing the OGC API - Common Part 2 UAD 'definition' property (requirement REQ_extent-uad-definition: a URI 'from any semantic definition vocabulary'). A dereferenceable OGC API - Dimensions collection endpoint URL is a conformant value: it serves as both the semantic-concept identifier and the service-discovery entry point — follow it to the collection response, then to links[rel=\"items\"] for paginated members, plus capability links (/inverse, /children, /ancestors), hierarchy structure, language support, and conformsTo URIs. This single optional URI replaces the withdrawn 'provider' object as the entire link-out hook on the datacube side."
     }
   }
 }

@@ -15,10 +15,7 @@
     "time": {
       "type": "temporal",
       "extent": ["2000-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
-      "provider": {
-        "type": "daily-period",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal"
-      },
+      "definition": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal",
       "step": null,
       "unit": "dekad",
       "size": 900
