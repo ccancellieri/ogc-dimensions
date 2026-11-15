@@ -2,7 +2,7 @@
   "_snapshot": {
     "captured_at": "2026-04-13T20:14:23.038358+00:00",
     "source": "reference-implementation TestClient GET /dimensions/",
-    "note": "Dimension catalog exposed by the OGC Dimensions reference implementation (five canonical example collections covering the six provider types: dekadal, pentadal-monthly, pentadal-annual, daily-period, integer-range, tree). The FAO Agro-Informatics Platform deployment at https://data.review.fao.org/geospatial/v2/api/tools/dimensions/ extends this catalog to twelve production dimensions (FAOSTAT indicators, AGROVOC concepts, GAUL administrative units, etc.) using the same provider types."
+    "note": "Historical snapshot of the OGC Dimensions Python reference implementation catalog (six provider types). Note: the earlier FAO review deployment (data.review.fao.org) is decommissioned and standalone ogc-dimensions pagination has been superseded by Tellurion EDR Sparse Tile Cubes + Records UAD dimensions (https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021; see docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md)."
   },
   "response": {
     "collections": [

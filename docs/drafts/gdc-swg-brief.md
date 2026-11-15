@@ -1,4 +1,6 @@
-# GDC SWG Brief / Change Request Proposal Draft
+# GDC SWG Brief / Change Request Proposal Draft (Superseded)
+
+> **STATUS — WITHDRAWN / SUPERSEDED (November 2026):** The standalone paginated *OGC API – Dimensions* Change Request drafted below is withdrawn. See [../EDR_SPARSE_TILE_CUBES_PROPOSAL.md](../EDR_SPARSE_TILE_CUBES_PROPOSAL.md) for the active architecture combining **STAC UAD (`size`, `definition`, `variableType`) + standard OGC API – EDR `/collections/{cid}/items` with CQL2 `S_INTERSECTS` and `f=CoverageJSON` (`Domain`)**.
 
 **Target:** OGC GeoDataCube Standards Working Group
 **Contact:** geodatacube.swg@lists.ogc.org
@@ -144,7 +146,7 @@ The TB-20 pivot from standalone GDC standard to profile/integration approach dir
 - **JSON Schema:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/schema
 - **Worked examples:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/examples
 - **Reference implementation:** https://github.com/ccancellieri/ogc-dimensions/tree/main/reference-implementation
-- **Live demo (FAO):** https://data.review.fao.org/geospatial/v2/api/tools/docs
+- **Live demo (Tellurion, supersedes decommissioned `data.review.fao.org`):** https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021 (gallery: https://ccancellieri.github.io/tellurion-demos/)
 - **OGC Building Blocks:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/building-blocks
 - **API response examples:** https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/RESPONSES.md
 - **Interactive Jupyter notebooks (GeoID platform):**

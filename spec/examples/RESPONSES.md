@@ -366,9 +366,11 @@ Search results also use the FeatureCollection envelope.
 
 ---
 
-## Live endpoints
+## Reproducible & Live Endpoints (Tellurion)
 
-- Swagger UI: https://data.review.fao.org/geospatial/v2/api/tools/docs
-- Items: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5
-- Inverse: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15
-- Search: https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K*
+> *Note:* The historical FAO `data.review.fao.org` review sandbox is decommissioned. Reproducible endpoints are now served by [Tellurion](https://github.com/ccancellieri/tellurion) and the [Tellurion Demos Gallery](https://ccancellieri.github.io/tellurion-demos/):
+
+- Public STAC + Records demo: https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021
+- Items (dekadal 2021): https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021/items?limit=12
+- Temporal resolution (`2021-01-15` → `2021-01-D2` via CQL2 `T_INTERSECTS`): https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021/items?filter=T_INTERSECTS(interval,TIMESTAMP('2021-01-15T12:00:00Z'))
+- Live Sparse Pentadal EDR Cube & `S_INTERSECTS` Pruning (`CoverageJSON` `Domain`): https://ccancellieri.github.io/tellurion-demos/demos/stac/ (`GET /edr/.../collections/fao_chirps_pentadal_2021_italy/items?bbox=...&datetime=...&f=CoverageJSON`) — see [docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md](../../docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md)

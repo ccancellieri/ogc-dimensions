@@ -1,4 +1,10 @@
-# OGC Dimensions
+# OGC Dimensions *(Withdrawn / Evolved into EDR Sparse Tile Cubes & UAD)*
+
+> **ARCHITECTURAL PIVOT & WITHDRAWAL NOTICE (November 2026):** The standalone paginated *OGC API – Dimensions* draft and Python `reference-implementation/` are formally **retired / withdrawn from further standalone standardization and software development**.
+>
+> Embracing community feedback on [`stac-extensions/datacube#36`](https://github.com/stac-extensions/datacube/issues/36) (adopting OGC API – Common Part 2 UAD `definition` URI + `variableType` and `size`) and operational validation in [**Tellurion**](https://github.com/ccancellieri/tellurion) and [**GeoID**](https://github.com/un-fao/geoid), this work now converges on **100% existing OGC standards**: **[OGC API – EDR Sparse Tile Cubes (`S_INTERSECTS` + `CoverageJSON` `Domain`) & Common Part 2 UAD](docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md)**.
+>
+> This evolution resolves the FAO sparse multi-file Cloud-Optimized GeoTIFF (COG) pentadal/dekadal use case — contrasting embedded `coords` in GeoZarr against multi-file sparse COGs where inline `coords` cannot exist — without inventing non-standard endpoints: nominal calendars $D$ are queried via standard UAD `GET /dimensions/{id}/items?filter=T_INTERSECTS(...)`, while populated sparse tile intersections $S(\text{AOI}, \Delta t) \subsetneq D$ (and DuckDB/Portolan SDI virtual datacube joins) are discovered via standard `GET /edr/.../collections/{cid}/items?filter=S_INTERSECTS(...)&f=CoverageJSON` (`Domain`).
 
 **Scalable Dimension Member Dissemination and Algorithmic Generation for Geospatial Datacubes**
 
@@ -34,7 +40,7 @@ ogc-dimensions/
 │   │   ├── dimension-collection/ # BB: Records catalogue exposing provider + cube:dimensions
 │   │   ├── dimension-member/     # BB: Record representing a single dimension member
 │   │   ├── dimension-pagination/ # BB: OGC Common Part 2 pagination (numberMatched + next/prev)
-│   │   ├── dimension-inverse/    # BB: /inverse endpoint (value → member mapping)
+│   │   ├── dimension-inverse/    # BB (retired/archived): historical /inverse endpoint (value → member mapping)
 │   │   ├── dimension-hierarchical/ # BB: /children + /ancestors endpoints + ?parent= filter
 │   │   └── dimension-similarity/ # BB: /search?similar= endpoint + RFC 7807 501 stub
 │   └── examples/                 # Full collection JSON examples
@@ -126,98 +132,53 @@ curl "http://localhost:8000/dimensions/admin/children?parent=ITA"
 curl "http://localhost:8000/dimensions/admin/ancestors?member=ITA.01.001"
 ```
 
-## Live Demo
+## Live Demo & Reproducible Server (Tellurion)
 
-A live deployment is available on the FAO Agro-Informatics Platform review environment, integrated as an extension of the [GeoID](https://github.com/un-fao/geoid) catalog platform:
+> **Historical Note:** The earlier FAO Agro-Informatics Platform review sandbox (`data.review.fao.org`) referenced in the original 2026 drafts is decommissioned and kept only as historical pilot context. Reproducible UAD `/dimensions` and sparse COG/GeoZarr/GeoPackage EDR endpoints are now served via [**Tellurion**](https://github.com/ccancellieri/tellurion) and the [**Tellurion Demos Gallery**](https://ccancellieri.github.io/tellurion-demos/). See [`docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md`](docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md) for the full live walkthrough.
 
-**Swagger UI:** https://data.review.fao.org/geospatial/v2/api/tools/docs
-
-### Pagination walkthrough
-
-A dekadal dimension has 36 members per year. With `limit=5`, a client paginates through 8 pages to retrieve all members. Each response includes navigable `next`/`prev` links:
-
-```bash
-# Page 1: first 5 dekads of 2024
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5"
-# → numberMatched: 36, numberReturned: 5
-# → links: [self, next → offset=5]
-
-# Page 2: follow the "next" link
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5&offset=5"
-# → links: [self, next → offset=10, prev → offset=0]
-
-# Last page: offset=35
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5&offset=35"
-# → numberReturned: 1, links: [self, prev → offset=30]
-```
-
-### Provider capabilities
+- **Public STAC + Records UAD & Sparse EDR Cube Demo (Render):**
+  - Live interactive workbench: `https://ccancellieri.github.io/tellurion-demos/demos/stac/`
+  - UAD Collection / Dimension descriptor: `https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021`
+  - Paginated members (`dekadal-2021`): `https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021/items?limit=12`
+  - Temporal resolution (`2021-01-15` → `2021-01-D2`) via standard OGC API – Features Part 3 CQL2: `https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021/items?filter=T_INTERSECTS(interval,TIMESTAMP('2021-01-15T12:00:00Z'))`
+  - Populated sparse pentadal granule discovery $S(\text{AOI}, \Delta t) \subsetneq D$ via standard OGC API – EDR Part 1 (`/items` + CQL2 `S_INTERSECTS` + CoverageJSON `Domain`): `https://tellurion-stac-harvest-demo.onrender.com/public/edr/catalogs/default/collections/fao_chirps_pentadal_2021_italy/items?bbox=12.2,39.2,12.5,39.5&datetime=2021-01-01T00:00:00Z/2021-01-31T23:59:59Z&f=CoverageJSON`
+- **Local reproducible Tellurion demo (Port `10099`, Sparse Pentadal/Dekadal COG + GeoZarr + GeoPackage + EDR `CoverageJSON`):**
 
 ```bash
-# List all registered dimensions and their capabilities
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/"
+# Pentadal domain definition D (72/yr) & standard CQL2 T_INTERSECTS member lookup
+curl "http://127.0.0.1:10099/public/records/catalogs/default/dimensions/pentadal-2021"
+curl "http://127.0.0.1:10099/public/records/catalogs/default/dimensions/pentadal-2021/items?datetime=2021-01-12T00:00:00Z"
 
-# Pentadal-monthly (72/year, CHIRPS/FAO)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-monthly/items?limit=5"
+# Standard EDR /items with CQL2 S_INTERSECTS + f=CoverageJSON (returns populated Domain.axes.t.values)
+curl "http://127.0.0.1:10099/public/edr/catalogs/default/collections/fao_chirps_pentadal_2021_italy/items?bbox=12.2,39.2,12.5,39.5&datetime=2021-01-01T00:00:00Z/2021-01-31T23:59:59Z&f=CoverageJSON"
 
-# Pentadal-annual (73/year, GPCP/NOAA)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/pentadal-annual/items?limit=5"
-
-# Integer range (elevation bands, step=100m)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/integer-range/items?limit=5"
+# Sparse Pentadal COG Cube (CoverageJSON data slice with explicit temporal bounds & null gaps)
+curl "http://127.0.0.1:10099/public/edr/catalogs/default/collections/fao_chirps_pentadal_2021_italy/cube?bbox=12.2,39.2,12.5,39.5&datetime=2021-01-01T00:00:00Z/2021-01-31T23:59:59Z"
 ```
 
-### Bijective inversion
+### STAC Collection integration (UAD Minimal Form)
 
-```bash
-# What dekad does January 15 belong to?
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15"
-# → {valid: true, member: "2024-K02", range: {start: "2024-01-11", end: "2024-01-20"}}
-
-# Invalid date → rejected with nearest valid member
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-32"
-# → {valid: false, reason: "Cannot parse '2024-01-32' as a date."}
-```
-
-### Search
-
-```bash
-# Exact match by code
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?exact=2024-K15"
-
-# Range: first 6 dekads of the year
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?min=2024-K01&max=2024-K06"
-
-# Pattern: all dekads in 2024 starting with K1 (K10-K18 = 9 dekads)
-curl "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K1*"
-```
-
-### STAC Collection integration
-
-A dimension in `cube:dimensions` carries `size` (cardinality) and a slim `provider` object pointing at the dimension collection. Clients discover the paginated members endpoint by following the OGC API - Records `rel="items"` link on that collection response — no separate dimension-level items URL is required. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) for a complete example:
+A dimension in `cube:dimensions` carries `size` (cardinality), `definition` (OGC API – Common Part 2 UAD link-out to `/dimensions/{id}`), and `variableType` (UAD measurement scale enum). Clients discover paginated members by following `links[rel="items"]` on the UAD definition target, resolve arbitrary timestamps via standard CQL2 `T_INTERSECTS`, and discover populated sparse granules in an AOI via standard `GET /edr/.../collections/{cid}/items?filter=S_INTERSECTS(...)&f=CoverageJSON` (`Domain`) before calling `/cube`. See [`spec/examples/dekadal.json`](spec/examples/dekadal.json) and [`spec/examples/pentadal.json`](spec/examples/pentadal.json):
 
 ```json
 {
   "cube:dimensions": {
     "time": {
       "type": "temporal",
-      "size": 900,
-      "provider": {
-        "type": "daily-period",
-        "href": "https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal"
-      }
+      "extent": ["2021-01-01T00:00:00Z", "2021-12-31T23:59:59Z"],
+      "size": 72,
+      "definition": "https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/pentadal-2021",
+      "variableType": "categoricalOrdinal"
     }
   }
 }
 ```
 
-Client flow: `GET provider.href` → read `links[rel="items"]` → `GET` that URL for paginated `FeatureCollection`. Additional capabilities (`/inverse`, `/search`, `/children`, `/ancestors`) are advertised as Records `links[]` on the same collection response with their own `rel` values.
+Historical client flow in the retired Python prototype: `GET reference-implementation` endpoints remain frozen for archival reference in [`reference-implementation/`](reference-implementation/) and [`docs/dimensions-307-email.md`](docs/dimensions-307-email.md) without further development.
 
-The reference implementation is deployed on the FAO Agro-Informatics Platform (Google Cloud Run) as a pip-installable FastAPI extension. The `ogc-dimensions` package is mounted alongside the production STAC catalog services with no code duplication.
+## API Surface *(Retired Historical Prototype)*
 
-## API Surface
-
-All endpoints are mounted under a configurable prefix (default `/dimensions`).
+All endpoints of the archived Python `reference-implementation/` below are retired in favor of standard OGC API – Common Part 2 UAD (`/dimensions/{id}/items?filter=T_INTERSECTS(...)`) and OGC API – EDR Part 1 (`/collections/{cid}/items?filter=S_INTERSECTS(...)&f=CoverageJSON`).
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|

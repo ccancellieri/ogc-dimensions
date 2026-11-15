@@ -6,13 +6,9 @@
 
 ---
 
-> **STATUS — SUPERSEDED (kept for provenance).** This is the original *monolithic* #36 proposal. Following @fmigneault's review ([comment 4577791012](https://github.com/stac-extensions/datacube/issues/36#issuecomment-4577791012)) it has been **decomposed**; the umbrella tracker is [#18](https://github.com/ccancellieri/ogc-dimensions/issues/18) and the reshaped position was posted as the [reply on #36](https://github.com/stac-extensions/datacube/issues/36#issuecomment-4648632171).
->
-> The **entire datacube ask is now two optional, additive fields** on `cube:dimensions`:
-> 1. **`size`** (integer) — member cardinality, resolves #31.
-> 2. **`definition`** (URI) — OGC API – Common Part 2 UAD link-out to the OGC API – Dimensions collection endpoint.
->
-> A separate **`variableType`** property (UAD enum: `continuous | numericalOrdinal | numericalNominal | categoricalOrdinal | categoricalNominal`) carries the member measurement scale. The previously proposed **`provider` object and `nominal`/`ordinal` `type` values are withdrawn.** The normative schema is [`spec/schema/dimension.json`](../../spec/schema/dimension.json); the sections below are retained as the original narrative and use the old vocabulary except where the embedded JSON has been updated to the reshaped shape. No external PR is being opened.
+> **STATUS — SUPERSEDED & EVOLVED (November 2026, kept for provenance).** This is the original *monolithic* #36 proposal. Following `@fmigneault`'s review ([comment 4577791012](https://github.com/stac-extensions/datacube/issues/36#issuecomment-4577791012)), the standalone `ogc-dimensions` pagination framework is **withdrawn** in favor of two tracks:
+> 1. The **minimal STAC Datacube + OGC Common Part 2 UAD ask** on `cube:dimensions` (only `size`, `definition` URI, and `variableType` enum — see [`spec/schema/dimension.json`](../../spec/schema/dimension.json)). The previously proposed `provider` object, custom pagination layer, and `nominal`/`ordinal` `type` values are withdrawn.
+> 2. **[OGC API – EDR Sparse Tile Cubes (`S_INTERSECTS` + `CoverageJSON` `Domain`) & Common Part 2 UAD](../EDR_SPARSE_TILE_CUBES_PROPOSAL.md)**, implemented and verified in [Tellurion](https://github.com/ccancellieri/tellurion) and GeoID, contrasting single-store GeoZarr (embedded `coords`) with multi-file sparse pentadal/dekadal COG tile cubes ($D$ via UAD `/dimensions/{id}/items?filter=T_INTERSECTS(...)` vs populated $S(\text{AOI}, \Delta t)$ via EDR `/collections/{cid}/items?filter=S_INTERSECTS(...)&f=CoverageJSON`).
 
 ---
 
@@ -26,7 +22,7 @@
 
 Hi everyone 👋
 
-I'd like to share a proposal developed at [FAO](https://data.review.fao.org) through several years of operational experience with large, irregular, and multilingual datacube dimensions. The core observation is simple: the current `values` array doesn't scale, and no existing standard fills the gap. I'm posting this here because `cube:dimensions` is the natural extension point, and I'd love feedback before moving this toward a formal OGC Change Request.
+I'd like to share a proposal originating from operational experience at FAO (historical Agro-Informatics pilot) with large, irregular, and multilingual datacube dimensions. The core observation is simple: the current `values` array doesn't scale, and no existing standard fills the gap. I'm posting this here because `cube:dimensions` is the natural extension point, and I'd love feedback before moving this toward a formal OGC Change Request.
 
 Happy to split into separate issues or PRs if the community prefers a more incremental approach.
 
@@ -347,20 +343,19 @@ All examples validate against the extended schema and are backed by a live refer
 
 ---
 
-## Live Reference Implementation
+## Reproducible Reference Implementation (Tellurion + GeoID)
 
-Deployed on the FAO Agro-Informatics Platform review environment as an extension of the [GeoID](https://github.com/un-fao/geoid) catalog platform:
+Originally piloted on the FAO Agro-Informatics Platform review sandbox (`data.review.fao.org`, now decommissioned) with [GeoID](https://github.com/un-fao/geoid), the reproducible UAD `/dimensions` and sparse COG/GeoZarr/GeoPackage EDR endpoints are now served via [**Tellurion**](https://github.com/ccancellieri/tellurion) and the [**Tellurion Demos Gallery**](https://ccancellieri.github.io/tellurion-demos/):
 
-- **Swagger UI:** https://data.review.fao.org/geospatial/v2/api/tools/docs
-- **Dimension listing:** https://data.review.fao.org/geospatial/v2/api/tools/dimensions/
-- **Paginated members (dekadal):** https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/items?limit=5
-- **Inverse:** https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/inverse?value=2024-01-15
-- **Search:** https://data.review.fao.org/geospatial/v2/api/tools/dimensions/dekadal/search?like=2024-K*
-- **Multilingual + sort:** https://data.review.fao.org/geospatial/v2/api/tools/dimensions/admin-boundaries/items?level=1&language=fr&sort_by=label
+- **Public Tellurion STAC + Records UAD Demo:** https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021
+- **Public Paginated Members (dekadal 2021):** https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021/items?limit=12
+- **Public Temporal Resolution (`2021-01-15` → `2021-01-D2` via CQL2 `T_INTERSECTS`):** https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021/items?filter=T_INTERSECTS(interval,TIMESTAMP('2021-01-15T12:00:00Z'))
+- **Live Sparse Pentadal EDR Cube & `S_INTERSECTS` Pruning (`CoverageJSON` `Domain`):** https://ccancellieri.github.io/tellurion-demos/demos/stac/ — see [EDR Sparse Tile Cubes Proposal](../EDR_SPARSE_TILE_CUBES_PROPOSAL.md) (`GET /edr/.../collections/fao_chirps_pentadal_2021_italy/items?bbox=...&datetime=...&f=CoverageJSON`)
 
 Source code, JSON Schema, OGC Building Blocks, API response examples, and interactive notebooks:
 
 - **Spec + schema:** https://github.com/ccancellieri/ogc-dimensions
+- **Evolved EDR + UAD proposal:** [docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md](../EDR_SPARSE_TILE_CUBES_PROPOSAL.md)
 - **OGC Building Blocks:** https://github.com/ccancellieri/ogc-dimensions/tree/main/spec/building-blocks
 - **API response examples:** https://github.com/ccancellieri/ogc-dimensions/blob/main/spec/examples/RESPONSES.md
 - **Scientific paper (preprint):** https://github.com/ccancellieri/ogc-dimensions/tree/main/paper
@@ -394,4 +389,4 @@ This proposal is intended to progress through the OGC formal process:
 
 ---
 
-*Proposed by [Carlo Cancellieri](https://ccancellieri.github.io) — [FAO AgroInformatics Platform](https://data.review.fao.org)*
+*Proposed by [Carlo Cancellieri](https://ccancellieri.github.io) — Historical FAO AgroInformatics pilot, evolved into [Tellurion](https://github.com/ccancellieri/tellurion) + [GeoID](https://github.com/un-fao/geoid)*

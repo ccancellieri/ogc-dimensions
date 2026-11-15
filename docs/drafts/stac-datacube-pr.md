@@ -6,7 +6,7 @@
 
 ---
 
-> **STATUS — WITHDRAWN / NOT BEING OPENED.** This drafted the original *seven-field* PR. After @fmigneault's review the proposal was decomposed (umbrella [#18](https://github.com/ccancellieri/ogc-dimensions/issues/18)) and **no external PR is being opened**. Should a focused PR ever be revived, its entire scope is **two optional, additive fields** on the dimension object — `size` (integer, resolves #31) and `definition` (URI, OGC API – Common Part 2 UAD link-out) — plus an optional `variableType` enum (UAD measurement scale). The `href`, `provider`, `hierarchy`, and `nominal`/`ordinal`-type additions described below are **withdrawn**. Normative schema: [`spec/schema/dimension.json`](../../spec/schema/dimension.json). The section below is retained for provenance only.
+> **STATUS — WITHDRAWN / NOT BEING OPENED (Superseded November 2026).** This drafted the original *seven-field* PR. After `@fmigneault`'s review and the November 2026 architectural pivot, standalone `ogc-dimensions` pagination is **withdrawn** and **no external monolithic PR is being opened**. Any focused follow-up on `stac-extensions/datacube` is scoped strictly to the minimal OGC API – Common Part 2 UAD alignment (`size`, resolving `#31`, `definition` URI, and `variableType` enum) paired with [**EDR Sparse Tile Cubes: standard `/collections/{cid}/items` + CQL2 `S_INTERSECTS` + `f=CoverageJSON` (`Domain`)**](../EDR_SPARSE_TILE_CUBES_PROPOSAL.md). The `href`, `provider`, `hierarchy`, and `nominal`/`ordinal`-type additions described below are **withdrawn**. Normative schema: [`spec/schema/dimension.json`](../../spec/schema/dimension.json). The section below is retained for provenance only.
 
 ---
 
@@ -221,7 +221,8 @@ All additions are optional. No existing properties are modified. Existing collec
 - Worked examples validate against the extended schema
 - Reference implementation demonstrates all provider endpoints across 5 conformance levels
 - 138 tests passing in the reference implementation (`pytest tests/`)
-- Live demo: https://data.review.fao.org/geospatial/v2/api/tools/docs
+- Reproducible public Tellurion UAD demo (superseding the decommissioned `data.review.fao.org` pilot): https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021
+- Sparse COG / GeoZarr / GeoPackage EDR demo & evolved proposal: [docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md](../EDR_SPARSE_TILE_CUBES_PROPOSAL.md)
 - Interactive notebooks: [Creating Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/01_creating_dimensions.ipynb), [ASIS Dimensions](https://github.com/un-fao/geoid/blob/main/src/dynastore/extensions/notebooks/examples/02_asis_dimensions.ipynb)
 
 ### References

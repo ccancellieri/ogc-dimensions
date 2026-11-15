@@ -1,6 +1,8 @@
-# OGC GeoDataCube SWG — Formal Change Request Submission Package
+# OGC GeoDataCube SWG — Formal Change Request Submission Package (Superseded)
 
-**Package version:** 1.0.0-rc.1
+> **ARCHITECTURAL PIVOT & WITHDRAWAL NOTICE (November 2026):** The standalone paginated *OGC API – Dimensions* service model packaged below is **withdrawn** from further standardization and software development. Following community feedback on `stac-extensions/datacube#36` (adopting OGC API – Common Part 2 UAD `definition` + `variableType` and `size`) and operational validation of sparse multi-file GeoTIFF/COG cubes in Tellurion & GeoID, this work has converged on existing OGC standards in **[OGC API – EDR Sparse Tile Cubes (`S_INTERSECTS` + `CoverageJSON` `Domain`) & Common Part 2 UAD](EDR_SPARSE_TILE_CUBES_PROPOSAL.md)**. Historical pilot links to `data.review.fao.org` are replaced by [Tellurion](https://github.com/ccancellieri/tellurion) and the [Tellurion Demos Gallery](https://ccancellieri.github.io/tellurion-demos/).
+
+**Package version:** 1.0.0-rc.1 (historical archive)
 **Submission target:** OGC GeoDataCube Standards Working Group
 **Charter:** OGC 22-052
 **Date prepared:** 2026-04-14
@@ -25,7 +27,7 @@ The package addresses the dimension-member scalability gap identified across OGC
 | 4 | Worked collection examples (five) | `spec/examples/` | Stable |
 | 5 | Annotated API response examples | `spec/examples/RESPONSES.md` | Stable |
 | 6 | Reference implementation (FastAPI, pip-installable) | `reference-implementation/` | v1.0.0-rc.1, 138 tests passing |
-| 7 | Live deployment (FAO Agro-Informatics Platform) | https://data.review.fao.org/geospatial/v2/api/tools/docs | Operational |
+| 7 | Live deployment (Tellurion public demo + local reproducible) | https://tellurion-stac-harvest-demo.onrender.com/public/records/catalogs/default/dimensions/dekadal-2021 (supersedes decommissioned `data.review.fao.org`) | Operational / Reproducible |
 | 8 | Scientific paper (IMRAD, peer-review-ready) | `paper/manuscript.md` | Final draft |
 | 9 | Companion proposals (STAC Datacube, OGC Naming Authority) | `docs/drafts/stac-datacube-pr.md`, `docs/drafts/ogc-naming-authority.md` | Ready |
 
