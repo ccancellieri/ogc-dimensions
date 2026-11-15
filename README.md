@@ -1,10 +1,16 @@
 # OGC Dimensions *(Withdrawn / Evolved into EDR Sparse Tile Cubes & UAD)*
 
-> **ARCHITECTURAL PIVOT & WITHDRAWAL NOTICE (November 2026):** The standalone paginated *OGC API – Dimensions* draft and Python `reference-implementation/` are formally **retired / withdrawn from further standalone standardization and software development**.
+> **ARCHITECTURAL PIVOT, REPO CONSOLIDATION & ARCHIVE NOTICE (November 2026):**  
+> This standalone repository is **formally deprecated, retired from further development, and archived**.
 >
-> Embracing community feedback on [`stac-extensions/datacube#36`](https://github.com/stac-extensions/datacube/issues/36) (adopting OGC API – Common Part 2 UAD `definition` URI + `variableType` and `size`) and operational validation in [**Tellurion**](https://github.com/ccancellieri/tellurion) and [**GeoID**](https://github.com/un-fao/geoid), this work now converges on **100% existing OGC standards**: **[OGC API – EDR Sparse Tile Cubes (`S_INTERSECTS` + `CoverageJSON` `Domain`) & Common Part 2 UAD](docs/EDR_SPARSE_TILE_CUBES_PROPOSAL.md)**.
+> Following community convergence on [`stac-extensions/datacube#36`](https://github.com/stac-extensions/datacube/issues/36) and [`#31`](https://github.com/stac-extensions/datacube/issues/31), the formal proposal has been moved to its permanent canonical location inside the open-source geospatial engine **Tellurion**:  
+> 👉 **Canonical Proposal:** [**`docs/standards/ogc-edr-sparse-tile-cubes.md` in ccancellieri/tellurion**](https://github.com/ccancellieri/tellurion/blob/main/docs/standards/ogc-edr-sparse-tile-cubes.md)
 >
-> This evolution resolves the FAO sparse multi-file Cloud-Optimized GeoTIFF (COG) pentadal/dekadal use case — contrasting embedded `coords` in GeoZarr against multi-file sparse COGs where inline `coords` cannot exist — without inventing non-standard endpoints: nominal calendars $D$ are queried via standard UAD `GET /dimensions/{id}/items?filter=T_INTERSECTS(...)`, while populated sparse tile intersections $S(\text{AOI}, \Delta t) \subsetneq D$ (and DuckDB/Portolan SDI virtual datacube joins) are discovered via standard `GET /edr/.../collections/{cid}/items?filter=S_INTERSECTS(...)&f=CoverageJSON` (`Domain`).
+> - **STAC Datacube Alignment:** [**stac-extensions/datacube PR #40**](https://github.com/stac-extensions/datacube/pull/40) (adopting OGC API – Common Part 2 UAD `definition` URI, `size`, and `variableType` enum).
+> - **Live Interactive Workbench:** [**Tellurion STAC & Sparse Datacube Workbench**](https://ccancellieri.github.io/tellurion/demos/stac/#sparse-cubes-workbench).
+> - **Technical Architecture Deep-Dive:** [**Sparse Irregular Datacubes on Cloud Storage**](https://ccancellieri.github.io/writing/sparse-datacubes-edr-cql2-portolan/).
+>
+> All historical draft files in this repository remain strictly as archival evidence.
 
 **Scalable Dimension Member Dissemination and Algorithmic Generation for Geospatial Datacubes**
 
